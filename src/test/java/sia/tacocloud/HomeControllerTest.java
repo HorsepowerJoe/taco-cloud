@@ -7,7 +7,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers; // static 사용으로 코드를 더 간결하게 사용 가능. ex) moc~~.status -> status()
 
-import sia.tacocloud.controller.HomeController;
+import sia.tacocloud.tacos.controller.HomeController;
 
 @WebMvcTest(HomeController.class)
 public class HomeControllerTest {

@@ -1,0 +1,13 @@
+server:
+  port: 8086
+
+
+spring:
+  devtools:
+    enabled: true
+  web:
+    resources:
+      static-locations:
+        - file:src/main/resources/static
+    profiles:
+      active: local
