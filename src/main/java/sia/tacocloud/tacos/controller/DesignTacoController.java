@@ -57,7 +57,6 @@
 package sia.tacocloud.tacos.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -79,8 +78,7 @@ public class DesignTacoController {
     public ResponseEntity<String> showDesignForm() {
         
         try {
-            String designForm = designTacoService.getDesignForm();
-            return ResponseEntity.ok(designForm);
+            return ResponseEntity.ok(designTacoService.getDesignForm());
         } catch (JsonProcessingException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("JSON 처리 중 오류가 발생했습니다.");            

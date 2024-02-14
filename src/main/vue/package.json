@@ -9,8 +9,10 @@
     "watch": "vue-cli-service build --watch"
   },
   "dependencies": {
+    "@vee-validate/rules": "^4.12.5",
     "axios": "^1.6.7",
     "core-js": "^3.8.3",
+    "vee-validate": "^4.5.8",
     "vue": "^3.2.13",
     "vue-router": "^4.0.13"
   },
@@ -30,14 +32,16 @@
     },
     "extends": [
       "plugin:vue/vue3-essential",
-      "eslint:recommended"
+      "eslint:recommended",
+      "plugin:vue/recommended"
     ],
     "parserOptions": {
       "parser": "@babel/eslint-parser"
     },
     "rules": {
       "vue/multi-word-component-names": "off",
-    "no-const-assign": "off"
+      "no-const-assign": "off",
+      "vue/valid-attribute-name": "error"
     }
   },
   "browserslist": [
