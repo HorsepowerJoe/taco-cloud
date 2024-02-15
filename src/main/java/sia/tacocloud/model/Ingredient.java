@@ -1,4 +1,4 @@
-package sia.tacocloud.tacos;
+package sia.tacocloud.model;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;

@@ -18,7 +18,7 @@
           :key="index"
         >
           <input
-            v-model="newTacoData.wrap"
+            v-model="newTacoData.orderedIngredients.wrap"
             name="ingredients"
             type="checkbox"
             :value="item.id"
@@ -37,7 +37,7 @@
           :key="index"
         >
           <input
-            v-model="newTacoData.protein"
+            v-model="newTacoData.orderedIngredients.protein"
             name="ingredients"
             type="checkbox"
             :value="item.id"
@@ -56,7 +56,7 @@
           :key="index"
         >
           <input
-            v-model="newTacoData.cheese"
+            v-model="newTacoData.orderedIngredients.cheese"
             name="ingredients"
             type="checkbox"
             :value="item.id"
@@ -75,7 +75,7 @@
           :key="index"
         >
           <input
-            v-model="newTacoData.veggies"
+            v-model="newTacoData.orderedIngredients.veggies"
             name="ingredients"
             type="checkbox"
             :value="item.id"
@@ -94,7 +94,7 @@
           :key="index"
         >
           <input
-            v-model="newTacoData.sauces"
+            v-model="newTacoData.orderedIngredients.sauces"
             name="ingredients"
             type="checkbox"
             :value="item.id"
@@ -114,7 +114,7 @@
       />
     </div>
     <button type="submit">
-      Submit
+      Submit your taco
     </button>
   </form>
 </template>
@@ -126,13 +126,14 @@ import { validate, Field } from 'vee-validate';
 import { ref, onMounted } from "vue";
 
 const tacoDatas = ref([{}]);
-const newTacoData = ref({
-    wrap: "",
-    protein: "",
-    cheese: "",
-    veggies: "",
-    sauces: "",
-    name: ""
+const newTacoData = ref({name: '',
+orderedIngredients:{
+    wrap: [],
+    protein: [],
+    cheese: [],
+    veggies: [],
+    sauces: [],
+    }
 });
 
 
@@ -147,13 +148,17 @@ onMounted(() => {
     });
 });
 
-
+const saveAndGo= () => {
+  sessionStorage.setItem('newTacoData', newTacoData);
+  window.location.href='/current';
+}
 
 
 
 const submitHandle = () => {
+    console.log(newTacoData.value);
     validate(newTacoData.value.name, { required: true, max: 15, min: 3 }).then((v) => {
-        v.valid ? axios.post('/api/sendTaco', newTacoData)
+        v.valid ? axios.post('/api/design', newTacoData.value).then(e=>{e.status===200?saveAndGo():alert('서버 통신 실패!')}).catch(e=>{alert('서버 통신 실패! \n'+e)})
             : alert('이름은 필수 기입이며, 3~15자까지 가능합니다.');
     });
 };

@@ -11,10 +11,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import sia.tacocloud.dto.IngredientDto;
+import sia.tacocloud.model.Ingredient;
+import sia.tacocloud.model.Taco;
+import sia.tacocloud.model.Ingredient.Type;
 import sia.tacocloud.repository.TacoRepository;
-import sia.tacocloud.tacos.Ingredient;
-import sia.tacocloud.tacos.Ingredient.Type;
-import sia.tacocloud.tacos.Taco;
 
 @Service
 @RequiredArgsConstructor

@@ -65,16 +65,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import sia.tacocloud.model.Taco;
 import sia.tacocloud.tacos.service.DesignTacoService;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/design")
 public class DesignTacoController {
     private final DesignTacoService designTacoService;
 
-    @GetMapping("/design")
+    @GetMapping()
     public ResponseEntity<String> showDesignForm() {
         
         try {
@@ -84,5 +88,15 @@ public class DesignTacoController {
                 .body("JSON 처리 중 오류가 발생했습니다.");            
         }
     }
+
+
+    @PostMapping()
+    public String processDesign(@RequestBody Taco design) {
+        //타코 디자인을 저장
+        log.info("Processing design: "+ design);
+        
+        return "redirect:/orders/current";
+    }
+    
     
 }

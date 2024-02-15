@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from './components/Home.vue';
 import Design from './components/Design.vue';
+import Home from './components/Home.vue';
+import OrderForm from './components/OrderForm.vue';
 
 
 const routes = [
@@ -13,7 +14,12 @@ const routes = [
     path: '/design',
     name: 'Design',
     component: Design
-  }
+  },
+  {
+    path: '/current',
+    name: 'OrderForm',
+    component: OrderForm
+  },
 ];
 
 const router = createRouter({

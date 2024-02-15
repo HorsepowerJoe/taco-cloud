@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Repository;
 
 import lombok.Data;
-import sia.tacocloud.tacos.Ingredient;
-import sia.tacocloud.tacos.Ingredient.Type;
+import sia.tacocloud.model.Ingredient;
+import sia.tacocloud.model.Ingredient.Type;
 
 @Repository
 @Data
