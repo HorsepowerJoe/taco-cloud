@@ -80,7 +80,7 @@
       type="text"
       name="ccExpiration"
     >
-    <span>{{ errors.ccExpiration ? '     만료 기간을 입력해 주세요.':'' }}</span>
+    <span>{{ errors.ccExpiration === 'ccExpiration is not valid.' ? "만료기간을 입력해 주세요." : errors.ccExpiration }}</span>
     <br>
 
     <label for="ccCVV">CVV: </label>
@@ -90,7 +90,7 @@
       type="text"
       name="ccCVV"
     >
-    <span>{{ errors.ccCVV ? '     CCV를 입력해 주세요.':'' }}</span>
+    <span>{{ errors.ccCVV === 'ccCVV is not valid.' ? "CVV를 입력해 주세요." : errors.ccCVV }}</span>
     <br>
 
     <input
@@ -113,9 +113,9 @@ const {handleSubmit, errors, defineField } = useForm({
     deliveryCity: {required:true},
     deliveryState:{required:true},
     deliveryZip: {required:true},
-    ccNumber: {required:true, numeric:true},
-    ccExpiration: {required:true, numeric:true},
-    ccCVV: {required:true, numeric:true},
+    ccNumber: {required:true, numeric:true, creditCardNumber:true},
+    ccExpiration: {required:true, ccExp:true},
+    ccCVV: {required:true, numeric:true, ccCVV:3},
     }
 });
 
@@ -133,7 +133,7 @@ const onSubmit = handleSubmit((formData)=>{
     if(Object.keys(errors.value).length > 0){
         return;
     }else{
-        axios.post('/api/orders', formData).then(resp=>{resp.status===200?location.href='/':alert('서버 통신 실패!')}).catch(e=>{alert('서버 통신 실패! \n'+e)});
+        axios.post('/api/orders', formData).then(resp=>{resp.status===200?location.href='/':alert('서버 통신 실패!\n'+resp.body)}).catch(e=>{alert('서버 통신 실패! \n'+e.response.data)});
     }
 })
 

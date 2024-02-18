@@ -156,10 +156,15 @@ const saveAndGo= () => {
 
 
 const submitHandle = () => {
-    console.log(newTacoData.value);
-    validate(newTacoData.value.name, { required: true, max: 15, min: 3 }).then((v) => {
+  if(newTacoData.value.orderedIngredients.wrap.length + newTacoData.value.orderedIngredients.protein.length + newTacoData.value.orderedIngredients.cheese.length + newTacoData.value.orderedIngredients.veggies.length + newTacoData.value.orderedIngredients.sauces.length <= 0){
+    alert('최소 1개 이상의 재료를 골라야 합니다.');
+    return;
+  }
+
+  console.log(newTacoData.value.orderedIngredients.wrap.length);
+  validate(newTacoData.value.name, { required: true, max: 15, min: 5 }).then((v) => {
         v.valid ? axios.post('/api/design', newTacoData.value).then(e=>{e.status===200?saveAndGo():alert('서버 통신 실패!')}).catch(e=>{alert('서버 통신 실패! \n'+e)})
-            : alert('이름은 필수 기입이며, 3~15자까지 가능합니다.');
+            : alert('이름은 필수 기입이며, 5~15자까지 가능합니다.');
     });
 };
 </script>

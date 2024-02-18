@@ -1,5 +1,12 @@
 package sia.tacocloud.tacos.controller;
 
+import java.net.URI;
+
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -7,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import sia.tacocloud.model.Order;
 
@@ -29,9 +37,15 @@ public class OrderController {
     }
 
     @PostMapping()
-    public String postMethodName(@RequestBody Order order) {
+    public ResponseEntity<Object> postMethodName(@RequestBody @Valid Order order, Errors errors) {
+        if(errors.hasErrors()){
+            return ResponseEntity.badRequest().body(errors.getAllErrors().toString());
+        }
+
         log.info("Order submitted: "+order);
-        return "";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create("/"));
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
     
     

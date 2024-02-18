@@ -12,6 +12,7 @@
     "@vee-validate/rules": "^4.12.5",
     "axios": "^1.6.7",
     "core-js": "^3.8.3",
+    "credit-card-validator": "^1.0.8",
     "vee-validate": "^4.5.8",
     "vue": "^3.2.13",
     "vue-router": "^4.0.13"

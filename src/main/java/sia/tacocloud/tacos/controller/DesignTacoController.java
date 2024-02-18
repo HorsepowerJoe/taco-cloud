@@ -55,20 +55,27 @@
 //         }  --> view가 vue기 때문에 api로 리팩토링 해야할듯
 // }
 package sia.tacocloud.tacos.controller;
+
+
+import java.net.URI;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import sia.tacocloud.model.Taco;
 import sia.tacocloud.tacos.service.DesignTacoService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 
 @Slf4j
@@ -91,11 +98,16 @@ public class DesignTacoController {
 
 
     @PostMapping()
-    public String processDesign(@RequestBody Taco design) {
+    public ResponseEntity<Object> processDesign(@RequestBody@Valid Taco design, Errors errors) {
+
+        if(errors.hasErrors()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors.toString());
+        }
         //타코 디자인을 저장
         log.info("Processing design: "+ design);
-        
-        return "redirect:/orders/current";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create("/orders/current"));
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
     
     
