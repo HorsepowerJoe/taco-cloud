@@ -76,8 +76,18 @@ Hibernate를 사용하니 다양한 유효성 검사가 가능해서 좋았다. 
 그래도 CommandLineRunner 방식이 더 자바스러워서 좋은것 같다.<br />
 또한 try catch finally 방식의 db연결은 너무 번거로운 과정이라며 책에서 이야기 하는데..<br />
 그 이후에 세련된 방식이라고 JdbcTemplate 사용 예를 소개하는 부분이 크게 와닿았다..<br />
-try catch finally의 방식도 너무 불필요하게 길었어서 try catch resources로 바꾸어 사용했었는데<br />
+try catch finally의 방식도 너무 길었어서 try catch resources로 바꾸어 사용했었는데<br />
 JdbcTemplate을 사용하니 코드가 많이 간소화 되어 좋았다.<br />
 
+## 24-02-19
+엄청 재미있는 책이다. 액자식 구성으로.<br />
+기존에는 이렇게 사용했어ㅡtry catch finallyㅡ<br />
+너무 불편했지? 그래서 준비했어 ㅡJdbcTemplateㅡ 맛있지?<br />
+근데 좀 텁텁하지? 그래서 준비했어 ㅡSimpleJdbcInsertㅡ 맛있지?<br />
+근데 진짜는 지금부터야 ㅡJPAㅡ<br />
+예전에 배울 때는 이런 점진적 발전이 아니라 try catch finally에서 바로 myBatis로 넘어와서 중간 단계를 모르니<br />
+그냥 역사 수업이라고 생각했는데. 이렇게 점진적으로 발전하는 기술들을 모두 책을 통해서 써 보니 재미있다.<br />
+이제부터 JPA 시작. 써 보긴 했지만 너무 기초적인 수준의 사용만 하였었는데.<br />
+이제 활용과 심화로 들어가보자. <br />
 
 
