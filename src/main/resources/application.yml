@@ -4,10 +4,23 @@ server:
 
 spring:
   devtools:
-    enabled: true
+    restart:
+      enabled: true
   web:
     resources:
       static-locations:
         - file:src/main/resources/static
-    profiles:
-      active: local
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:mysql://localhost:3306/taco_db
+    username: taco
+    password: taco123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  sql:
+    init:
+      mode: always

@@ -150,7 +150,7 @@ onMounted(() => {
 
 const saveAndGo= () => {
   sessionStorage.setItem('newTacoData', newTacoData);
-  window.location.href='/current';
+  window.location.href='/orders/current';
 }
 
 

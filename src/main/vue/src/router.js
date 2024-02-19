@@ -16,7 +16,7 @@ const routes = [
     component: Design
   },
   {
-    path: '/current',
+    path: '/orders/current',
     name: 'OrderForm',
     component: OrderForm
   },

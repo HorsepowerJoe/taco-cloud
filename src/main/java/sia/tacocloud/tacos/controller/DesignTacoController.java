@@ -64,16 +64,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.SessionAttributes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import sia.tacocloud.model.Order;
 import sia.tacocloud.model.Taco;
 import sia.tacocloud.tacos.service.DesignTacoService;
 
@@ -82,12 +85,24 @@ import sia.tacocloud.tacos.service.DesignTacoService;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/design")
+// @SessionAttributes("order") Restful API에서는 사용 x
 public class DesignTacoController {
     private final DesignTacoService designTacoService;
 
+    // Restful API에서는 사용 x
+    // @ModelAttribute(name = "order")
+    // public Order order(){
+    //     return new Order();
+    // }
+
+    // @ModelAttribute(name="taco")
+    // public Taco taco(){
+    //     return new Taco();
+    // }
+
+
     @GetMapping()
     public ResponseEntity<String> showDesignForm() {
-        
         try {
             return ResponseEntity.ok(designTacoService.getDesignForm());
         } catch (JsonProcessingException e) {
@@ -101,13 +116,12 @@ public class DesignTacoController {
     public ResponseEntity<Object> processDesign(@RequestBody@Valid Taco design, Errors errors) {
 
         if(errors.hasErrors()){
+            System.out.println();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors.toString());
         }
         //타코 디자인을 저장
         log.info("Processing design: "+ design);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create("/orders/current"));
-        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        return designTacoService.saveDesign(design);
     }
     
     
