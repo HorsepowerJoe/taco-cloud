@@ -26,7 +26,7 @@ CREATE TABLE
         deliveryName VARCHAR(50) NOT NULL,
         deliveryStreet VARCHAR(50) NOT NULL,
         deliveryCity VARCHAR(50) NOT NULL,
-        deliveryState VARCHAR(2) NOT NULL,
+        deliveryState VARCHAR(20) NOT NULL,
         deliveryZip VARCHAR(10) NOT NULL,
         ccNumber VARCHAR(16) NOT NULL,  
         ccCVV VARCHAR(3) NOT NULL,

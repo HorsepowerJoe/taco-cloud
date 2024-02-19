@@ -2,7 +2,6 @@ package sia.tacocloud.tacos.controller;
 
 import java.net.URI;
 
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import sia.tacocloud.model.Order;
+import sia.tacocloud.tacos.service.OrderService;
 
 
 
@@ -25,6 +25,11 @@ import sia.tacocloud.model.Order;
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
+    private OrderService orderService;
+
+    public OrderController(OrderService orderService){
+        this.orderService = orderService;
+    }
     
     @GetMapping("/current")
     public String orderForm(@RequestParam String param) {
@@ -37,15 +42,13 @@ public class OrderController {
     }
 
     @PostMapping()
-    public ResponseEntity<Object> postMethodName(@RequestBody @Valid Order order, Errors errors) {
+    public ResponseEntity<Object> sendOrder(@RequestBody @Valid Order order, Errors errors) {
         if(errors.hasErrors()){
             return ResponseEntity.badRequest().body(errors.getAllErrors().toString());
         }
 
         log.info("Order submitted: "+order);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create("/"));
-        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        return orderService.saveOrder(order);
     }
     
     

@@ -102,6 +102,7 @@
 <script setup>
 import axios from 'axios';
 import { useForm } from 'vee-validate';
+import { onMounted } from 'vue';
 
 
 
@@ -133,8 +134,16 @@ const onSubmit = handleSubmit((formData)=>{
     if(Object.keys(errors.value).length > 0){
         return;
     }else{
+      formData.tacos=
         axios.post('/api/orders', formData).then(resp=>{resp.status===200?location.href='/':alert('서버 통신 실패!\n'+resp.body)}).catch(e=>{alert('서버 통신 실패! \n'+e.response.data)});
     }
+})
+
+onMounted(() => {
+  console.log(sessionStorage.getItem('newTacoData'))
+  if (sessionStorage.getItem('newTacoData'))return;
+  alert('주문 정보가 없습니다. 디자인 페이지로 돌아갑니다.');
+  window.location.href='/design';
 })
 
 
