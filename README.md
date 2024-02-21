@@ -195,7 +195,7 @@ Between은 지정된 값의 범위에 해당 값이 포함되어야 한다.<br /
   <li>IsNot, Not</li>
   <li>IgnoringCase, IgnoresCase</li>
 </ul>
-물론. 모든 String 비교에ㅐ서 대소문자를 무시하기 위해 IgnoringCase와 IgnoresCase대신<br />
+물론. 모든 String 비교에서 대소문자를 무시하기 위해 IgnoringCase와 IgnoresCase대신<br />
 AllIgnoringCase또는 AllIgnoresCase를 메서드 이름으로 사용할 수 있다.<br />
 <br />
 지정된 열의 값을 기준으로 결과를 정렬하기 위해 메서드 이름의 끝에 OrderBy를 추가할 수도 있다.<br />
