@@ -1,4 +1,4 @@
-package sia.tacocloud.repository;
+package sia.tacocloud.tacos.repository;
 
 import java.util.Arrays;
 import java.util.List;
@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Repository;
 
 import lombok.Data;
-import sia.tacocloud.model.Ingredient;
-import sia.tacocloud.model.Ingredient.Type;
+import sia.tacocloud.tacos.model.Ingredient;
+import sia.tacocloud.tacos.model.Ingredient.Type;
 
 @Repository
 @Data

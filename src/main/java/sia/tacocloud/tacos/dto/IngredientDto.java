@@ -1,11 +1,11 @@
-package sia.tacocloud.dto;
+package sia.tacocloud.tacos.dto;
 
 import java.util.HashSet;
 import java.util.Set;
 
 import lombok.Data;
-import sia.tacocloud.model.Ingredient;
-import sia.tacocloud.model.Taco;
+import sia.tacocloud.tacos.model.Ingredient;
+import sia.tacocloud.tacos.model.Taco;
 
 @Data
 public class IngredientDto {

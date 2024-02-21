@@ -15,19 +15,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import sia.tacocloud.dto.IngredientDto;
-import sia.tacocloud.model.Ingredient;
-import sia.tacocloud.model.Ingredient.Type;
-import sia.tacocloud.model.Taco;
-import sia.tacocloud.repository.JdbcIngredientRepository;
-import sia.tacocloud.repository.JdbcTacoRepository;
+import sia.tacocloud.tacos.dto.IngredientDto;
+import sia.tacocloud.tacos.model.Ingredient;
+import sia.tacocloud.tacos.model.Taco;
+import sia.tacocloud.tacos.model.Ingredient.Type;
+import sia.tacocloud.tacos.repository.IngredientRepository;
+import sia.tacocloud.tacos.repository.JdbcIngredientRepository;
+import sia.tacocloud.tacos.repository.JdbcTacoRepository;
+import sia.tacocloud.tacos.repository.TacoRepository;
 
 @Service
 @RequiredArgsConstructor
 public class DesignTacoService {
     // private final TacoRepository repo;
-    private final JdbcIngredientRepository jdbcIngredientRepository;
-    private final JdbcTacoRepository jdbcTacoRepository;
+    private final IngredientRepository jdbcIngredientRepository;
+    private final TacoRepository jdbcTacoRepository;
 
     public String getDesignForm() throws JsonProcessingException {
         IngredientDto ingredientDto = new IngredientDto();

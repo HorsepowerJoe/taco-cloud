@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import sia.tacocloud.model.Order;
+import sia.tacocloud.tacos.model.Order;
 import sia.tacocloud.tacos.service.OrderService;
 
 

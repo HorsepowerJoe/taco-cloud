@@ -1,7 +1,6 @@
 server:
   port: 8086
 
-
 spring:
   devtools:
     restart:
@@ -18,9 +17,11 @@ spring:
     password: taco123
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    hibernate:
+      ddl-auto: update
     properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-  sql:
-    init:
-      mode: always
+      dialect: org.hibernate.dialect.MySQLDialect
+
+  # sql:
+  #   init:
+  #     mode: always

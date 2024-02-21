@@ -5,8 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import sia.tacocloud.model.Order;
-import sia.tacocloud.repository.OrderRepository;
+import sia.tacocloud.tacos.model.Order;
+import sia.tacocloud.tacos.repository.OrderRepository;
 
 @Service
 @RequiredArgsConstructor
