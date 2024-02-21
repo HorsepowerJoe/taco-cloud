@@ -1,11 +1,9 @@
 package sia.tacocloud.tacos.service;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -17,11 +15,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import sia.tacocloud.tacos.dto.IngredientDto;
 import sia.tacocloud.tacos.model.Ingredient;
-import sia.tacocloud.tacos.model.Taco;
 import sia.tacocloud.tacos.model.Ingredient.Type;
+import sia.tacocloud.tacos.model.Taco;
 import sia.tacocloud.tacos.repository.IngredientRepository;
-import sia.tacocloud.tacos.repository.JdbcIngredientRepository;
-import sia.tacocloud.tacos.repository.JdbcTacoRepository;
 import sia.tacocloud.tacos.repository.TacoRepository;
 
 @Service

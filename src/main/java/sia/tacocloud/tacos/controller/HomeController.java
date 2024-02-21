@@ -1,16 +1,19 @@
 package sia.tacocloud.tacos.controller;
 
-import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 
 @Controller
-public class HomeController implements ErrorController{
+public class HomeController {
 
-    @GetMapping({"/", "/error"})
+    @GetMapping({"/", "/design", "/orders/**"})
     public String home() {
-        return "index.html";
+        return "/index.html";
     } 
 }

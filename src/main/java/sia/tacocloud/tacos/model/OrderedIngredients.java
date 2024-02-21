@@ -1,6 +1,5 @@
 package sia.tacocloud.tacos.model;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.Data;
 
