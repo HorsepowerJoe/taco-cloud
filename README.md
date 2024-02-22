@@ -1,4 +1,4 @@
-<h2>실무를 통해 백엔드의 더 깊은 내용들을 접하고 싶었으나 취업이 되지 않은 관계로.. <br />
+<h2 align=center>실무를 통해 백엔드의 더 깊은 내용들을 접하고 싶었으나 취업이 되지 않아 <br />
   <br />
   Spring in Action으로 실무 섀도복싱 + 공식문서 Vue 3.0 시작합니다. <br />
   <br />
@@ -206,8 +206,106 @@ AllIgnoringCase또는 AllIgnoresCase를 메서드 이름으로 사용할 수 있
 데이터 추가를 쉽게 실행하게 해 주는 SimpleJdbcInsert로 더 높은 효율을 추구하게 되었고<br />
 스프링 데이터 JPA를 통해 레포 인터페이스를 작성하듯 JPA 퍼시스턴스를 쉽게 할 수 있게 되었다.<br />
 <hr />
+스프링 시큐리티 챕터에 들어왔다. 그러나 책과 다른 버전을 사용하였기 때문에 SecurityConfig을 정의하는 데에 어려움이 있었다.<br />
+그 이유는 버전이 올라감에 따라 너무 많은 것들이 deprecated 되어 있었기 때문이다.<br />
+기존의 Sprint Security는 WebSecurityConfigurerAdapter를 사용했었는데.<br />
+이는 클래스에서 메서드를 오버라이드하여 보안을 구성하는 방법이었다.<br />
+이 방식은 유지 관리가 어렵고, 복잡성이 증가하며, 컴포넌트 간의 결합도가 높아지는 등의 문제가 있었다고 하는데..<br />
+사실 나는 모든 프로젝트를 비교적 최신 버전으로 구성하였기 때문에 구식 방법이 얼마나 복잡했고 얼만큼 결합도가 높았는지는 모른다.<br />
+<br />
+확실한 것은 기존의 WebSecurityConfigurerAdapter를 상속받아 한곳에 다 때려박아야 했던 코드들을 컴포넌트 방식으로 분할하였고.<br />
+람다를 사용하여 타입의 안정성을 가져갔다는 것.<br />
 
 
 
 
+## 24-02-22
+기존 책의 내용은 WebSecurityConfigurerAdapter를 상속받아 시큐리티를 구성하였다.<br />
+
+```
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+  @Override
+  protected void configure (HttpSecurity http) throws Exception {
+    http
+    .authorizeRequests()
+      .antMatchers("/design", "/orders")
+        .access("hasROLE('ROLE_USER')")
+      .antMatchers("/", "/**").access("permitAll")
+    .and()
+      .httpBasic();
+  }
+  @Override
+  public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth.inMemoryAuthentication()
+          .withUser("user1")
+          .password("{noop}password1")
+          .authorities("ROLE_USER")
+  }
+}
+```
+
+하지만 바뀐 Spring Security 6에서는 람다 DSL을 사용하여 SecurityFilterChain을 구현하도록 권장하고 있다.<br />
+위의 내용을 SpringFilterChain 방식으로 바꾸게 되면 다음과 같다.
+```
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+    
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+        http.csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests((auth) -> auth
+                                .requestMatchers("/design", "/orders")
+                                .hasRole("USER")
+                                .requestMatchers("/api", "/api/**")
+                                .hasRole("USER")
+                                .requestMatchers("/", "/**")
+                                .permitAll()
+                                .anyRequest()
+                                .permitAll()
+                ).httpBasic(withDefaults());
+        
+                return http.build();
+    }
+
+      @Bean
+    public InMemoryUserDetailsManager userDetailsService() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+            .username("admin")
+            .password("admin")
+            .roles("ADMIN")
+            .username("user")
+            .password("user")
+            .roles("USER")
+            .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+}
+```
+핵심적인 내용은 다음과 같다.<br />
+<ul>
+  <li>모든 내용은 람다 DSL방식으로 작성되어야 한다는 것.</li>
+  <li>antMatchers는 사라졌고(deprecated가 아니다) requestMatchers를 사용하여야 한다는 것.</li>
+  <li>기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식이 표현이 명확해 졌다는 것.</li>
+  <li>컴포넌트 방식으로 구현을 하기 때문에 자유롭게 필터 순서를 구성할 수 있다는 것.</li>
+</ul>
+
+원래는 버전을 낮추어 책의 내용을 따라가려고 했지만.<br />
+분명히 나보다 머리 좋고 더 뛰어나고 더 지식적으로 풍요로운 사람들의 집단에서<br />
+무언가를 사용하지 않기를 권장하고 더 나은 사용법으로 유도하는 것은<br />
+다 그만한 이유가 있을 것이라고 판단했는데 아니나 다를까 다 마땅한 이유가 있었다.<br />
+<br />
+위 핵심 내용 정리를 토대로 얻을 수 있는 이점으로는<br />
+1. 모든 내용이 람다 DSL 방식으로 구성되면 보안 구성을 보다 간결하고 직관적으로 작성 가능하다는 이점이 있다. 타입의 안정성은 덤으로.<br />
+2. antMatchers에서 requestMatchers로 바꾸어 사용하게 되면 객체를 사용 가능하기 때문에 복잡한 규칙도 정의가 가능하다.<br />
+```
+.requestMatchers(HttpMethod.POST, "/api/**").authenticated() -> 특정 HTTP 메서드와 경로에 대한 보안 설정
+.requestMatchers(new IpAddressMatcher("192.168.1.0/24")).authenticated() -> 특정 IP 주소에서의 요청에 대한 보안 설정
+.requestMatchers(new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")).permitAll() -> 특정 요청 헤더 값을 기반으로 보안 설정
+```
+3. 기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식이 표현이 명확해 졌다는 것.
+4. 컴포넌트 방식으로 구현을 하기 때문에 자유롭게 필터 순서를 구성할 수 있다는 것.
+
+<hr />
 
