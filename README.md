@@ -82,7 +82,7 @@ public class SecurityConfig {
   <li>기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식이 표현이 명확해 졌다는 것.</li>
   <li>컴포넌트 방식으로 구현을 하기 때문에 자유롭게 필터 순서를 구성할 수 있다는 것.</li>
 </ul>
-
+  
 원래는 버전을 낮추어 책의 내용을 따라가려고 했지만.<br />
 분명히 나보다 머리 좋고 더 뛰어나고 더 지식적으로 풍요로운 사람들의 집단에서<br />
 무언가를 사용하지 않기를 권장하고 더 나은 사용법으로 유도하는 것은<br />
@@ -96,7 +96,7 @@ public class SecurityConfig {
 .requestMatchers(new IpAddressMatcher("192.168.1.0/24")).authenticated() -> 특정 IP 주소에서의 요청에 대한 보안 설정
 .requestMatchers(new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")).permitAll() -> 특정 요청 헤더 값을 기반으로 보안 설정
 ```
-3. 기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식이 표현이 명확해 졌다는 것.
+3. 기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식의 표현이 명확해 졌다는 것.
 4. 컴포넌트 방식으로 구현을 하기 때문에 자유롭게 필터 순서를 구성할 수 있다는 것.
 
 <hr />
