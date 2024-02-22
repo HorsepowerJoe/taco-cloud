@@ -215,8 +215,97 @@ AllIgnoringCase또는 AllIgnoresCase를 메서드 이름으로 사용할 수 있
 <br />
 확실한 것은 기존의 WebSecurityConfigurerAdapter를 상속받아 한곳에 다 때려박아야 했던 코드들을 컴포넌트 방식으로 분할하였고.<br />
 람다를 사용하여 타입의 안정성을 가져갔다는 것.<br />
-아직은 구성 단계이기 때문에 더 깊은 내용에 대해서는 책의 내용을 따라가며.. Spring Security 6에 대해 공부를 해 봐야 알 것 같다.<br />
 
 
 
+
+## 24-02-22
+기존 책의 내용은 WebSecurityConfigurerAdapter를 상속받아 시큐리티를 구성하였다.<br />
+
+```
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+  @Override
+  protected void configure (HttpSecurity http) throws Exception {
+    http
+    .authorizeRequests()
+      .antMatchers("/design", "/orders")
+        .access("hasROLE('ROLE_USER')")
+      .antMatchers("/", "/**").access("permitAll")
+    .and()
+      .httpBasic();
+  }
+  @Override
+  public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth.inMemoryAuthentication()
+          .withUser("user1")
+          .password("{noop}password1")
+          .authorities("ROLE_USER")
+  }
+}
+```
+
+하지만 바뀐 Spring Security 6에서는 람다 DSL을 사용한 SecurityFilterChain을 구현하도록 권장하고 있다.<br />
+위의 내용을 SpringFilterChain 방식으로 바꾸게 되면 다음과 같다.
+```
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+    
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+        http.csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests((auth) -> auth
+                                .requestMatchers("/design", "/orders")
+                                .hasRole("USER")
+                                .requestMatchers("/api", "/api/**")
+                                .hasRole("USER")
+                                .requestMatchers("/", "/**")
+                                .permitAll()
+                                .anyRequest()
+                                .permitAll()
+                ).httpBasic(withDefaults());
+        
+                return http.build();
+    }
+
+      @Bean
+    public InMemoryUserDetailsManager userDetailsService() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+            .username("admin")
+            .password("admin")
+            .roles("ADMIN")
+            .username("user")
+            .password("user")
+            .roles("USER")
+            .build();
+        return new InMemoryUserDetailsManager(user);
+    }
+}
+```
+핵심적인 내용은 다음과 같다.<br />
+<ul>
+  <li>모든 내용은 람다 DSL방식으로 작성되어야 한다는 것.</li>
+  <li>antMatchers는 사라졌고(deprecated가 아니다) requestMatchers를 사용하여야 한다는 것.</li>
+  <li>기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식이 표현이 명확해 졌다는 것.</li>
+  <li>컴포넌트 방식으로 구현을 하기 때문에 자유롭게 필터 순서를 구성할 수 있다는 것.</li>
+</ul>
+
+원래는 버전을 낮추어 책의 내용을 따라가려고 했지만.<br />
+분명히 나보다 머리 좋고 더 뛰어나고 더 지식적으로 풍요로운 사람들의 집단에서<br />
+무언가를 사용하지 않기를 권장하고 더 나은 사용법으로 유도하는 것은<br />
+다 그만한 이유가 있을 것이라고 판단했는데 아니나 다를까 다 마땅한 이유가 있었다.<br />
+<br />
+위 핵심 내용 정리를 토대로 얻을 수 있는 이점으로는<br />
+1. 모든 내용이 람다 DSL 방식으로 구성되면 보안 구성을 보다 간결하고 직관적으로 작성 가능하다는 이점이 있다. 타입의 안정성은 덤으로.<br />
+2. antMatchers에서 requestMatchers로 바꾸어 사용하게 되면 객체를 사용 가능하기 때문에 복잡한 규칙도 정의가 가능하다.<br />
+```
+.requestMatchers(HttpMethod.POST, "/api/**").authenticated() -> 특정 HTTP 메서드와 경로에 대한 보안 설정
+.requestMatchers(new IpAddressMatcher("192.168.1.0/24")).authenticated() -> 특정 IP 주소에서의 요청에 대한 보안 설정
+.requestMatchers(new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")).permitAll() -> 특정 요청 헤더 값을 기반으로 보안 설정
+```
+3. 기존 오타에 취약하고 난해하였던 .access(hasROLE('ROLE_USER')) 방식이 표현이 명확해 졌다는 것.
+4. 컴포넌트 방식으로 구현을 하기 때문에 자유롭게 필터 순서를 구성할 수 있다는 것.
+
+<hr />
 
