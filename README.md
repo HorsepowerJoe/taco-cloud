@@ -245,7 +245,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
-하지만 바뀐 Spring Security 6에서는 람다 DSL을 사용한 SecurityFilterChain을 구현하도록 권장하고 있다.<br />
+하지만 바뀐 Spring Security 6에서는 람다 DSL을 사용하여 SecurityFilterChain을 구현하도록 권장하고 있다.<br />
 위의 내용을 SpringFilterChain 방식으로 바꾸게 되면 다음과 같다.
 ```
 @Configuration
