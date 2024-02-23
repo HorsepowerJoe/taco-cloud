@@ -42,13 +42,17 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 기술 블로그에서도 LDAP 방식은 잘 사용하지 않았는지 제대로 포스팅 된 내용들이 없어 공식 문서를 참고하게 되었다.  
 
 먼저 LDAP라는 것에 대해서 알 필요가 있는데.  
-LDAP(Lightweight Directory Access Protocol)는 경량 디렉터리 접근 프로토콜로. X.500이라는 DAP의 경량화된 버전이라 Lightweight가 붙게 되었다.  
-
+  
+LDAP(Lightweight Directory Access Protocol)는 경량 디렉터리 접근 프로토콜로, X.500이라는 DAP의 경량화된 버전이라 Lightweight가 붙게 되었다.  
+<br />
+<br />
 핵심적인 내용으로는  
 1. HTTP Protocol과 유사하게 Request와 Response를 가지고 있고, ldap://xxxx.xxxx.xx:port와 같은 형태로 URL이 정의되어 HTTP와 유사한 점이 많다.  
 2. HTTP와 다르게 LDAP는 인증이 되어야만 Request와 Response가 가능하다.  
 3. HTTP는 평문으로 전송하여 패킷 탈취 가능성이 있지만 LDAP의 경우에는 인코딩을 적용하여 바이너리 포맷으로 전송하기 때문에 보안의 이점이 있다.  
 4. LDAP는 LDIF 포맷으로 데이터를 Tree 구조로 저장한다.
+<br />
+<br />
 
 이제 LDAP인증을 Spring Security 6 방식으로 구현할 차례다.  
 기존의 간단한 위 내용과는 달리 LDAP방식의 인증을 Spring Security 6로 구현하려면 먼저 다음의 과정들이 필요하다.  
