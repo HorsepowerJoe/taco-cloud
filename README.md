@@ -10,6 +10,200 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+## 24-02-23
+오늘은 Spring Security에 내장된 세 번째 사용자 스토어인 LDAP 기반의 사용자 스토어를 알아볼 것이다.<br />
+책에서는 WebSecurityConfigurerAdapter를 상속받아 Configure를 Override하는 방식으로 시큐리티를 구성하였다..<br />
+코드는 다음과 같다.<br />
+```
+@Configuration
+public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth
+            .ldapAuthentication()
+            .userSearchBase("ou=people")
+            .userSearchFilter("(uid={0})")
+            .groupSearchBase("ou=group")
+            .groupSerachFilter("member={0}")
+            .contextSource()
+            .root("dc=tacocloud,dc=com")
+            .ldif("classpath:users.ldif")
+            .and()
+            .passwordCompare()
+            .passwordEncoder(new BCryptPasswordEncoder())
+            .passwordAttribute("userPasscode");
+            .contextSource().url("ldap://tacocloud.com:389/dc=tacocloud,dc=com")
+    }
+
+}
+```
+<br />
+
+첫 페이지 부터 진도가 나가지 않았다. 바뀐 Spring Security 6에서는 당연하게도 위 방식의 작성을 지원하지 않았기 때문이다.  
+기술 블로그에서도 LDAP 방식은 잘 사용하지 않았는지 제대로 포스팅 된 내용들이 없어 공식 문서를 참고하게 되었다.  
+
+먼저 LDAP라는 것에 대해서 알 필요가 있는데.  
+  
+LDAP(Lightweight Directory Access Protocol)는 경량 디렉터리 접근 프로토콜로, X.500이라는 DAP의 경량화된 버전이라 Lightweight가 붙게 되었다.  
+<br />
+<br />
+핵심적인 내용으로는  
+1. HTTP Protocol과 유사하게 Request와 Response를 가지고 있고, ldap://xxxx.xxxx.xx:port와 같은 형태로 URL이 정의되어 HTTP와 유사한 점이 많다.  
+2. HTTP와 다르게 LDAP는 인증이 되어야만 Request와 Response가 가능하다.  
+3. HTTP는 평문으로 전송하여 패킷 탈취 가능성이 있지만 LDAP의 경우에는 인코딩을 적용하여 바이너리 포맷으로 전송하기 때문에 보안의 이점이 있다.  
+4. LDAP는 LDIF 포맷으로 데이터를 Tree 구조로 저장한다.
+<br />
+<br />
+
+이제 LDAP인증을 Spring Security 6 방식으로 구현할 차례다.  
+기존의 간단한 위 내용과는 달리 LDAP방식의 인증을 Spring Security 6로 구현하려면 먼저 다음의 과정들이 필요하다.  
+내용들은 https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/ldap.html 을 참고하여 작성하였다. 
+<br />
+<hr />
+<br />
+1. 구성을 지정할 LDAP 서버가 필요하다.<br />
+<br />
+LDAP방식의 인증은 LDAP서버를 통해서 처리되기 때문에 먼저 LDAP서버를 셋업할 필요가 있다.<br />
+기존에는 모든 과정이 사전 구성 되어있어 셋업이 필요 없었지만<br />
+Spring Security 6에서는 컴포넌트 방식으로 구성하여야 하기 때문에 코드의 양이 더 많아진다.<br />
+<br />
+
+```
+@Bean
+public EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean() {
+    //Embedded LDAP 서버 컨텍스트 소스 Factory Bean을 생성
+    EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean = EmbeddedLdapServerContextSourceFactoryBean
+            .fromEmbeddedLdapServer();
+    
+    //책에서는 389포트를 사용한다고 하는데 나는 8000번대 포트로 통일시켰다.
+    contextSourceFactoryBean.setPort(8389);
+    
+    //책에서 .root("dc=tacocloud,dc=com")로 지정했던 것이 이 방식에서는 아래와 같다.
+    contextSourceFactoryBean.setRoot("dc=tacocloud,dc=com");
+
+
+    return contextSourceFactoryBean;
+}
+```
+<br />
+
+contextSourceFactoryBean은 Spring Security에서 LDAP 서버와의 연결을 설정하는 데 사용된다.  
+이를 통해 Spring 애플리케이션이 LDAP 서버로부터 사용자 인증 및 권한 부여를 수행할 수 있는 것이다.  
+  
+EmbeddedLdapServerContextSourceFactoryBean은 내장된 LDAP 서버와의 연결을 설정하는 데 사용되며  
+설정된 포트 및 루트 DN과 같은 구성 속성을 사용하여 LDAP 서버에 연결된다.  
+  
+이 방식을 Embedded UnboundID Server방식이라고 하는데. 실행을 시켜보면 
+<br />
+
+```
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'authorities' defined in class path resource [sia/tacocloud/tacos/security/SecurityConfig.class]: Unsatisfied dependency expressed through method 'authorities' parameter 0: Error creating bean with name 'contextSourceFactoryBean': FactoryBean threw exception on object creation
+.
+.
+.
+Caused by: java.lang.IllegalStateException: Embedded LDAP server is not provided
+```
+
+<br />
+위와 같은 에러가 발생할텐데..<br />
+여기서 정말 많이 헤매었다. 공식 문서를 찾아서 보았을 때는 종속성으로 unboundid-ldapsdk가 추가되어 있어야 작동한다는 것.<br />
+책에서는 이 부분을 짚지 않았어서 종속성이 문제일 것이라 생각지 못하고 삽질을 많이 했었다.<br />
+그리고 공식 문서를 찾아보고 EmbeddedLdapServerContextSourceFactoryBean의 내용을 뜯어보면서 그 이유를 알게 되었다.<br />  
+<br />
+
+```
+	private static final String UNBOUNDID_CLASSNAME = "com.unboundid.ldap.listener.InMemoryDirectoryServer";
+
+	private static final boolean unboundIdPresent;
+
+	static {
+		ClassLoader classLoader = EmbeddedLdapServerContextSourceFactoryBean.class.getClassLoader();
+		unboundIdPresent = ClassUtils.isPresent(UNBOUNDID_CLASSNAME, classLoader);
+	}
+
+@Override
+	public DefaultSpringSecurityContextSource getObject() throws Exception {
+		if (!unboundIdPresent) {
+			throw new IllegalStateException("Embedded LDAP server is not provided");
+		}
+		this.container = getContainer();
+		this.port = this.container.getPort();
+		DefaultSpringSecurityContextSource contextSourceFromProviderUrl = new DefaultSpringSecurityContextSource(
+				"ldap://127.0.0.1:" + this.port + "/" + this.root);
+		if (this.managerDn != null) {
+			contextSourceFromProviderUrl.setUserDn(this.managerDn);
+			if (this.managerPassword == null) {
+				throw new IllegalStateException("managerPassword is required if managerDn is supplied");
+			}
+			contextSourceFromProviderUrl.setPassword(this.managerPassword);
+		}
+		contextSourceFromProviderUrl.afterPropertiesSet();
+		return contextSourceFromProviderUrl;
+	}
+```
+<br />
+private static final String UNBOUNDID_CLASSNAME = "com.unboundid.ldap.listener.InMemoryDirectoryServer";  <br />
+이 코드는 UnboundID 라이브러리의 InMemoryDirectoryServer 클래스의 패키지 경로를 문자열로 할당한다.  <br />
+InMemoryDirectoryServer는 UnboundID에서 제공하는 내장형 LDAP 서버를 생성하기 위해 사용될 것이다.  <br />
+  <br />
+이후 ClassLoader에 의해 동적으로 로딩되어 ClassUtils.isPresent()에 의해 존재 여부를 확인하게 되고.  <br />
+getObject()에서 로딩이 되지 않았을 경우 ㅡ즉. 해당 라이브러리가 없을 경우ㅡ  <br />
+new IllegalStateException("Embedded LDAP server is not provided")을 반환한다.  <br />
+<br />
+그랬다.. 종속성의 문제였다..  <br />
+pom.xml에 해당 내용을 추가하였고, 문제를 해결하였다.  <br />
+<br />
+<hr />
+<br />
+2. 책의 내용을 따라가기 위하여 ldapAuthenticationManager를 구현한다.<br />
+<br />
+
+```
+@Bean
+    AuthenticationManager ldapAuthenticationManager(
+            BaseLdapPathContextSource contextSource) {
+        LdapBindAuthenticationManagerFactory factory = new LdapBindAuthenticationManagerFactory(contextSource);
+        factory.setUserSearchBase("ou=people");
+        factory.setUserSearchFilter("(uid={0})");
+        return factory.createAuthenticationManager();
+    }
+```
+<br />
+기존 책의 내용과는 다르게 ldapAuthenticationManager에서는 groupSettings를 할 수 없다.<br />
+groupSettings를 위해서는 LdapAuthoritiesPopulator의 구현이 필요하다.<br />
+LdapAuthoritiesPopulator는 사용자에게 어떤 권한이 반환되는지 결정하는 데 사용된다.<br />
+<br />
+
+```
+ @Bean
+    LdapAuthoritiesPopulator authorities(BaseLdapPathContextSource contextSource) {
+        String groupSearchBase = "ou=groups";
+        DefaultLdapAuthoritiesPopulator authorities = new DefaultLdapAuthoritiesPopulator(contextSource,
+                groupSearchBase);
+        authorities.setGroupSearchFilter("(member={0})");
+        return authorities;
+    }
+```
+<br />
+
+이제 내장 LDAP 사용을 위한 구성이 끝났다.<br />
+책에서는 원격 LDAP서버 참조에 대해서도 설명하여 놓았기에 새로운 방식의 외장 LDAP 서버를 참조하는 방법에 대해서도 알아보았다.<br />
+<br />
+
+```
+ContextSource contextSource(UnboundIdContainer container) {
+	return new DefaultSpringSecurityContextSource("ldap://tacocloud.com:8389/dc=tacocloud,dc=com");
+}
+```
+<br />
+
+정말 험난한 길이다. 그래도 새로운 것을 배우고 익힌다는 것은 언제나 마음을 든든하게 해 준다.<br />
+책에서는 2페이지로 정리된 내용이지만.. 쉽지 않았다.. 정보가 많지 않아서 어려움이 많았던 것 같다.<br />
+공식 문서를 찾아보는 습관을 굳히는 데에 도움이 되었다.<br />
+
+<hr />
+
 
 ## 24-02-22
 기존 책의 내용은 WebSecurityConfigurerAdapter를 상속받아 시큐리티를 구성하였다.<br />
