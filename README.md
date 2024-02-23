@@ -38,7 +38,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 }
 ```
-오늘은 첫 페이지 부터 진도가 나가지 않았다. 바뀐 Spring Security 6에서는 당연하게도 위 방식의 작성을 지원하지 않았기 때문이다.  
+<br />
+첫 페이지 부터 진도가 나가지 않았다. 바뀐 Spring Security 6에서는 당연하게도 위 방식의 작성을 지원하지 않았기 때문이다.  
 기술 블로그에서도 LDAP 방식은 잘 사용하지 않았는지 제대로 포스팅 된 내용들이 없어 공식 문서를 참고하게 되었다.  
 
 먼저 LDAP라는 것에 대해서 알 필요가 있는데.  
