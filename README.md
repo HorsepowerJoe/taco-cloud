@@ -39,6 +39,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 }
 ```
 <br />
+
 첫 페이지 부터 진도가 나가지 않았다. 바뀐 Spring Security 6에서는 당연하게도 위 방식의 작성을 지원하지 않았기 때문이다.  
 기술 블로그에서도 LDAP 방식은 잘 사용하지 않았는지 제대로 포스팅 된 내용들이 없어 공식 문서를 참고하게 되었다.  
 
@@ -86,6 +87,7 @@ public EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean() {
 }
 ```
 <br />
+
 contextSourceFactoryBean은 Spring Security에서 LDAP 서버와의 연결을 설정하는 데 사용된다.  
 이를 통해 Spring 애플리케이션이 LDAP 서버로부터 사용자 인증 및 권한 부여를 수행할 수 있는 것이다.  
   
