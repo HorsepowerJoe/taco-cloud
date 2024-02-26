@@ -119,7 +119,7 @@ protected void configure(HttpSecurity http) throws Exception {
 }
 ```
 <br />
-위의 내용을 Spring Security 6버전의 방식으로 바꾸게 된다면 아래와 같아진다.
+위의 내용을 Spring Security 6버전의 방식으로 바꾸게 된다면 아래와 같아진다.<br />
 <br />
 
 ```
