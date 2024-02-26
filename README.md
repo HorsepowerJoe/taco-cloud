@@ -156,6 +156,52 @@ protected void configure(HttpSecurity http) throws Exception {
     }
 ```
 
+더 복잡한 심화 내용으로 들어가보자.. 위의 내용을 알았다면 분명 할 수 있을 것이다.. p.151)<br />
+<br />
+```
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+	http
+	  .authorizeRequests()
+	  .antMatchers("/design", "/orders")
+	    .access("hasRole('ROLE_USER') && " +
+	      "T(java.util.Calendar).getInstance().get(" +
+	      "T(java.util.Calendar).DAY_OF_WEEK) == " +
+	      "T(java.tuil.Calendar).TUESDAY")
+	  .antMatchers("/", "/**").access("permitAll");
+}
+```
+아..<br />
+러프하게 생각해보자<br />
+T(java.util.Calendar).getInstance().get(T(java.util.Calendar).DAY_OF_WEEK) == T(java.tuil.Calendar).TUESDAY<br />
+결국 화요일인 경우에만 ROLE_USER의 제약조건이 걸리는 것인데..<br />
+
+<br />
+
+AuthorizationManager의 verify에는 request 객체를 인자로 받고 있다. 그 말은 리퀘스트 객체의 세션에서 요청이 언제 이루어 졌는지 시간 정보를 알 수 있을 것이다.<br />
+그러나 이 방법은 클라이언트쪽에서 조작을 할 수 있지 않을까 하는 걱정이 있으니..<br />
+책과 같이 java.util.Calendar.getInstance()를 사용하여 구현해보자.<br />
+
+<br />
+
+```
+    public AuthorizationDecision onlyUserAndTuesDay(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+        Calendar now = java.util.Calendar.getInstance();
+        if(now.get(now.DAY_OF_WEEK) == now.TUESDAY){
+            return new AuthorizationDecision(true);
+        }else{
+            return new AuthorizationDecision(false);
+        }
+    }
+```
+
+챕터 하나가 통째로 무용지물이 되었으니.. 빠르게 진도를 나가봐야겠다.. <br />
+<br />
+<hr />
+<br />
+
+
+
 
 
 
