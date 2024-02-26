@@ -176,7 +176,7 @@ protected void configure(HttpSecurity http) throws Exception {
 아..<br />
 러프하게 생각해보자<br />
 T(java.util.Calendar).getInstance().get(T(java.util.Calendar).DAY_OF_WEEK) == T(java.tuil.Calendar).TUESDAY<br />
-결국 화요일인 경우에만 ROLE_USER의 제약조건이 걸리는 것인데..<br />
+결국 화요일에만 ROLE_USER의 제약조건이 승인되는 것인데..<br />
 
 <br />
 
