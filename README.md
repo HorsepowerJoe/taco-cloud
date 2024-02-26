@@ -10,6 +10,105 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+## 24-02-26
+UserDetails 인터페이스를 구현한 User 클래스에 대하여. <br />
+<br />
+
+UserDetails를 구현한 User 클래스는 기본 사용자 정보를 프레임워크에 제공한다.<br />
+예를 들어, 해당 사용자에게 부여된 권한과 해당 사용자 계정을 사용할 수 있는 지의 여부등을 제공하는 것이다.<br />
+<br />
+
+getAuthorities() 메서드는 해당 사용자에게 부여된 권한을 저장한 컬렉션을 반환한다.<br />
+메서드 이름이 is로 시작하고 Expired로 끝나는 다양한 메서드들은 해당 사용자 계정의 활성화 또는 비활성화 여부를 나타내는 boolean값을 반환한다.<br />
+<br />
+<hr />
+<br />
+
+<b>스프링 표현식</b>
+
+스프링 시큐리티에서는 hasRole(), paermitAll() 등의 보안 요구 선언 메서드들이 있다. <br />
+이 중 SpEL표현식이 true일 때 접근을 허용하는 access(String) 메서드가 있는데, Spring Security 6에서는<br />
+인자로 String 타입이 아닌 AuthorizationManager<RequestAuthorizationContext>를 받는 것으로 변경되었다.<br />
+
+AuthorizationManager는 무엇일까? 공식 문서에서는 다음과 같이 설명하고 있다.<br />
+<br />
+
+```
+Spring Security는 메소드 호출 또는 웹 요청과 같은 보안 객체에 대한 액세스를 제어하는 인터셉터를 제공합니다.
+Invocation Handling은 AuthorizationManager 인스턴스에 의해 메소드 호출이나 웹 요청이 진행될 수 있는지에 대한 사전 호출 결정을 의미합니다.
+또한 AuthorizationManager 인스턴스에 의해 반환된 값이 허용되는지에 대한 사후 호출 결정도 이루어집니다.
+
+AuthorizationManager는 AccessDecisionManager와 AccessDecisionVoter를 대체합니다.
+AccessDecisionManager 또는 AccessDecisionVoter를 사용자 지정하는 애플리케이션은 AuthorizationManager를 사용하도록 변경하는 것이 좋습니다.
+AuthorizationManager는 Spring Security의 요청 기반, 메소드 기반 및 메시지 기반 인가 구성 요소에서 호출되며 최종 액세스 제어 결정을 담당합니다.
+AuthorizationManager 인터페이스에는 두 가지 메소드가 포함되어 있습니다.
+
+AuthorizationDecision check(Supplier<Authentication> authentication, Object secureObject);
+
+default AuthorizationDecision verify(Supplier<Authentication> authentication, Object secureObject)
+        throws AccessDeniedException {
+    // ...
+}
+AuthorizationManager의 check 메소드는 인가 결정을 내리기 위해 필요한 모든 관련 정보를 전달받습니다.
+특히, secure Object를 전달함으로써 실제 보안 객체 호출에 포함된 인수를 검사할 수 있습니다.
+예를 들어, 보안 객체가 MethodInvocation인 경우 MethodInvocation에서 Customer 인수를 쿼리하고,
+그에 따라 AuthorizationManager에서 고객에 대한 작업이 허용되었는지 확인하는 보안 로직을 구현할 수 있습니다.
+구현체는 액세스가 허용되면 양수인 AuthorizationDecision을 반환하고
+액세스가 거부되면 음수인 AuthorizationDecision을 반환하며
+결정을 보류하는 경우에는 null인 AuthorizationDecision을 반환해야 합니다.
+
+verify는 check를 호출하고, 액세스가 거부되는 경우 AccessDeniedException을 발생시킵니다.
+```
+<br />
+공식 문서에서 설명하였던 AuthorizationManager 클래스는 다음과 같이 구성되어 있다.<br />
+<br />
+
+```
+@FunctionalInterface
+public interface AuthorizationManager<T> {
+
+	/**
+	 * Determines if access should be granted for a specific authentication and object.
+	 * @param authentication the {@link Supplier} of the {@link Authentication} to check
+	 * @param object the {@link T} object to check
+	 * @throws AccessDeniedException if access is not granted
+	 */
+	default void verify(Supplier<Authentication> authentication, T object) {
+		AuthorizationDecision decision = check(authentication, object);
+		if (decision != null && !decision.isGranted()) {
+			throw new AccessDeniedException("Access Denied");
+		}
+	}
+
+	/**
+	 * Determines if access is granted for a specific authentication and object.
+	 * @param authentication the {@link Supplier} of the {@link Authentication} to check
+	 * @param object the {@link T} object to check
+	 * @return an {@link AuthorizationDecision} or null if no decision could be made
+	 */
+	@Nullable
+	AuthorizationDecision check(Supplier<Authentication> authentication, T object);
+
+}
+```
+<br />
+verify 메서드는 주어진 authentication 및 object를 사용하여 액세스 권한을 확인하고, 액세스가 거부되면 공식 문서의 설명과 같이 AccessDeniedException을 발생시킨다. <br />
+여기에서 Supplier<Authentication> authentication은 현재 사용자의 인증 정보를 제공하는 Supplier이고, 이 Supplier를 통해 현재 사용자의 인증 정보를 얻을 수 있다. <br />
+T object는 액세스 권한을 확인할 대상 객체를 나타내다.<br />
+<br />
+
+먼저, check 메서드를 사용하여 주어진 authentication과 object에 대한 액세스 결정을 수행하며 그 결과를 AuthorizationDecision 객체로 받는다.<br />
+그런 다음, decision이 null이 아니고 권한이 부여되지 않았다면ㅡ즉. decision.isGranted()가 false인 경우ㅡ "Access Denied" 메시지를 가진 AccessDeniedException을 던진다.<br />
+<br />
+
+기존의 access는 SpEL표현식을 사용하여 인증을 진행하였지만, 바뀐 Spring Security 6에서는 request를 받아 AuthorizationDecision(boolean)으로 처리해 주어야 한다.<br />
+access의 사용 방법에 대해서는 학습하였으니 책의 내용으로 들어가보자.<br />
+<br />
+
+
+
+
+
 ## 24-02-23
 오늘은 Spring Security에 내장된 세 번째 사용자 스토어인 LDAP 기반의 사용자 스토어를 알아볼 것이다.<br />
 책에서는 WebSecurityConfigurerAdapter를 상속받아 Configure를 Override하는 방식으로 시큐리티를 구성하였다..<br />
@@ -341,14 +440,14 @@ UserDetailsManager는 스프링 시큐리티 기본 db 테이블을 사용하고
 기본적인 테이블 구성은 다음과 같다.
 
 ```
-<b>사용자 정보 테이블</b>
+사용자 정보 테이블
 TABLE users(
   username,
   password,
   enabled
 )
 
-<b>사용자 권한 테이블</b>
+사용자 권한 테이블
 TABLE authorities (
     username,
     authority,
@@ -356,7 +455,7 @@ TABLE authorities (
         FOREIGN KEY (username) REFERENCES users(username)
 );
 
-<b>authorities 테이블에서 username과 authority 열에 대한 고유 인덱스</b>
+authorities 테이블에서 username과 authority 열에 대한 고유 인덱스
 UNIQUE INDEX ix_auth_username
     ON authorities (username, authority);
 ```
