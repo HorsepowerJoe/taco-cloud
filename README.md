@@ -60,7 +60,7 @@ AuthorizationManager의 check 메소드는 인가 결정을 내리기 위해 필
 verify는 check를 호출하고, 액세스가 거부되는 경우 AccessDeniedException을 발생시킵니다.
 ```
 <br />
-공식 문서에서 설명하였던 AuthorizationManager 클래스는 다음과 같이 구성되어 있다.<br />
+공식 문서에서 설명하였던 AuthorizationManager는 다음과 같이 구성되어 있다.<br />
 <br />
 
 ```
