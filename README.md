@@ -155,7 +155,7 @@ protected void configure(HttpSecurity http) throws Exception {
         return new AuthorizationDecision(true);
     }
 ```
-
+<br />
 더 복잡한 심화 내용으로 들어가보자.. 위의 내용을 알았다면 분명 할 수 있을 것이다.. p.151)<br />
 <br />
 
