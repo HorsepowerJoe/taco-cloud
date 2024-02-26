@@ -103,7 +103,58 @@ T object는 액세스 권한을 확인할 대상 객체를 나타낸다.<br />
 
 기존의 access는 SpEL표현식을 사용하여 인증을 진행하였지만, 바뀐 Spring Security 6에서는 request를 받아 AuthorizationDecision(boolean)으로 처리해 주어야 한다.<br />
 access의 사용 방법에 대해서는 학습하였으니 책의 내용으로 들어가보자.<br />
+<hr />
+
+좋은 예가 바로 나왔다 p.151)<br />
 <br />
+
+```
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+	http
+	  .authorizeRequests()
+	  .antMatchers("/design", "/orders")
+	    .access("hasRole('ROLE_USER')")
+	  .antMatchers("/", "/**").access("permitAll");
+}
+```
+<br />
+위의 내용을 Spring Security 6버전의 방식으로 바꾸게 된다면 아래와 같아진다.
+<br />
+
+```
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers("/design", "/orders")
+                        .hasRole("USER")
+                        .requestMatchers("/api/design", "/api/design")
+                        .access(this::hasRole)
+                        .requestMatchers("/", "/**", "/api/**")
+                        .access(this::permitAll)
+                        .anyRequest()
+                        .permitAll())
+                .httpBasic(withDefaults());
+
+        return http.build();
+    }
+
+
+    public AuthorizationDecision hasRole(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+        Authentication auth = authentication.get();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_USER"))) {
+            return new AuthorizationDecision(true);
+        } else {
+            return new AuthorizationDecision(false);
+        }
+    }
+
+
+    public AuthorizationDecision permitAll(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+        return new AuthorizationDecision(true);
+    }
+```
 
 
 
