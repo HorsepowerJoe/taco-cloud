@@ -187,9 +187,9 @@ AuthorizationManager의 verify에는 request 객체를 인자로 받고 있다. 
 <br />
 
 ```
-    public AuthorizationDecision onlyUserAndTuesDay(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+   public AuthorizationDecision onlyUserAndTuesDay(Supplier<Authentication> authentication, RequestAuthorizationContext object){
         Calendar now = java.util.Calendar.getInstance();
-        if(now.get(now.DAY_OF_WEEK) == now.TUESDAY){
+        if(hasRole(authentication,object).isGranted() && now.get(now.DAY_OF_WEEK) == now.TUESDAY){
             return new AuthorizationDecision(true);
         }else{
             return new AuthorizationDecision(false);
