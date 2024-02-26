@@ -158,6 +158,7 @@ protected void configure(HttpSecurity http) throws Exception {
 
 더 복잡한 심화 내용으로 들어가보자.. 위의 내용을 알았다면 분명 할 수 있을 것이다.. p.151)<br />
 <br />
+
 ```
 @Override
 protected void configure(HttpSecurity http) throws Exception {
@@ -171,6 +172,7 @@ protected void configure(HttpSecurity http) throws Exception {
 	  .antMatchers("/", "/**").access("permitAll");
 }
 ```
+<br />
 아..<br />
 러프하게 생각해보자<br />
 T(java.util.Calendar).getInstance().get(T(java.util.Calendar).DAY_OF_WEEK) == T(java.tuil.Calendar).TUESDAY<br />
