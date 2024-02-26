@@ -94,7 +94,7 @@ public interface AuthorizationManager<T> {
 <br />
 verify 메서드는 주어진 authentication 및 object를 사용하여 액세스 권한을 확인하고, 액세스가 거부되면 공식 문서의 설명과 같이 AccessDeniedException을 발생시킨다. <br />
 여기에서 Supplier<Authentication> authentication은 현재 사용자의 인증 정보를 제공하는 Supplier이고, 이 Supplier를 통해 현재 사용자의 인증 정보를 얻을 수 있다. <br />
-T object는 액세스 권한을 확인할 대상 객체를 나타내다.<br />
+T object는 액세스 권한을 확인할 대상 객체를 나타낸다.<br />
 <br />
 
 먼저, check 메서드를 사용하여 주어진 authentication과 object에 대한 액세스 결정을 수행하며 그 결과를 AuthorizationDecision 객체로 받는다.<br />
