@@ -18,20 +18,19 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
 import lombok.RequiredArgsConstructor;
+import sia.tacocloud.tacos.repository.UserRepository;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     // private final DataSource dataSource;
-    private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
-    
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -45,13 +44,28 @@ public class SecurityConfig {
                         .access(this::permitAll)
                         .anyRequest()
                         .permitAll())
+                .formLogin(formLogin -> {
+                    formLogin
+                            .usernameParameter("username")
+                            .passwordParameter("password")
+                            .loginPage("/login")
+                            .loginProcessingUrl("/processinglogin")
+                            .defaultSuccessUrl("/design", true);
+                })
+                .logout(logout -> {
+                    logout
+                            .deleteCookies("remove")
+                            .invalidateHttpSession(false)
+                            .logoutUrl("/logout")
+                            .logoutSuccessUrl("/");
+
+                })
                 .httpBasic(withDefaults());
 
         return http.build();
     }
 
-
-    public AuthorizationDecision hasRole(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+    public AuthorizationDecision hasRole(Supplier<Authentication> authentication, RequestAuthorizationContext object) {
         Authentication auth = authentication.get();
         if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_USER"))) {
             return new AuthorizationDecision(true);
@@ -60,28 +74,27 @@ public class SecurityConfig {
         }
     }
 
-
-    public AuthorizationDecision permitAll(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+    public AuthorizationDecision permitAll(Supplier<Authentication> authentication,
+            RequestAuthorizationContext object) {
         return new AuthorizationDecision(true);
     }
 
-    public AuthorizationDecision onlyUserAndTuesDay(Supplier<Authentication> authentication, RequestAuthorizationContext object){
+    public AuthorizationDecision onlyUserAndTuesDay(Supplier<Authentication> authentication,
+            RequestAuthorizationContext object) {
         Calendar now = java.util.Calendar.getInstance();
-        if(hasRole(authentication,object).isGranted() && now.get(now.DAY_OF_WEEK) == now.TUESDAY){
+        if (hasRole(authentication, object).isGranted() && now.get(now.DAY_OF_WEEK) == now.TUESDAY) {
             return new AuthorizationDecision(true);
-        }else{
+        } else {
             return new AuthorizationDecision(false);
         }
     }
 
     @Bean
-    public UserDetailsService userDetailsService(){
-        return userDetailsService;
+    public UserDetailsService userDetailsService() {
+        return new UserRepositoryUserDetailsService(userRepository);
     }
 
-
-
-
+    
 
     // @Bean
     // public JdbcUserDetailsManager jdbcUserDetailsService() {
@@ -93,31 +106,36 @@ public class SecurityConfig {
     // jdbcUserDetailsManager.createUser(user);
     // return jdbcUserDetailsManager;
     // }
-    // 
+    //
     // @Bean
-    // public EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean() {
-    //     EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean = EmbeddedLdapServerContextSourceFactoryBean
-    //             .fromEmbeddedLdapServer();
-    //     contextSourceFactoryBean.setPort(8389);
-    //     contextSourceFactoryBean.setRoot("dc=tacocloud,dc=com");
-    //     return contextSourceFactoryBean;
+    // public EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean()
+    // {
+    // EmbeddedLdapServerContextSourceFactoryBean contextSourceFactoryBean =
+    // EmbeddedLdapServerContextSourceFactoryBean
+    // .fromEmbeddedLdapServer();
+    // contextSourceFactoryBean.setPort(8389);
+    // contextSourceFactoryBean.setRoot("dc=tacocloud,dc=com");
+    // return contextSourceFactoryBean;
     // }
 
     // @Bean
-    // LdapAuthoritiesPopulator authorities(BaseLdapPathContextSource contextSource) {
-    //     String groupSearchBase = "ou=groups";
-    //     DefaultLdapAuthoritiesPopulator authorities = new DefaultLdapAuthoritiesPopulator(contextSource,
-    //             groupSearchBase);
-    //     authorities.setGroupSearchFilter("(member={0})");
-    //     return authorities;
+    // LdapAuthoritiesPopulator authorities(BaseLdapPathContextSource contextSource)
+    // {
+    // String groupSearchBase = "ou=groups";
+    // DefaultLdapAuthoritiesPopulator authorities = new
+    // DefaultLdapAuthoritiesPopulator(contextSource,
+    // groupSearchBase);
+    // authorities.setGroupSearchFilter("(member={0})");
+    // return authorities;
     // }
 
     // @Bean
     // AuthenticationManager ldapAuthenticationManager(
-    //         BaseLdapPathContextSource contextSource) {
-    //     LdapBindAuthenticationManagerFactory factory = new LdapBindAuthenticationManagerFactory(contextSource);
-    //     factory.setUserSearchBase("ou=people");
-    //     factory.setUserSearchFilter("(uid={0})");
-    //     return factory.createAuthenticationManager();
+    // BaseLdapPathContextSource contextSource) {
+    // LdapBindAuthenticationManagerFactory factory = new
+    // LdapBindAuthenticationManagerFactory(contextSource);
+    // factory.setUserSearchBase("ou=people");
+    // factory.setUserSearchFilter("(uid={0})");
+    // return factory.createAuthenticationManager();
     // }
 }

@@ -20,7 +20,7 @@ public class RegistrationService {
             userRepository.save(form.toUser(passwordEncoder));
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
         
        
