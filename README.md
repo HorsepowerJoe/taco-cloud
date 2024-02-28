@@ -44,8 +44,132 @@ formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개�
 새로운 마이그레이션 브랜치 taco-cloud-with-thymeleaf-and-low-spring-version를 만들어보자.<br />
 <br />
 <hr />
+이제 책의 내용을 따라갈 수 있게 되었다<br />
+스프링 시큐리티의 마지막 챕터 사용자 인지하기 챕터이다.<br />
+핵심적인 키워드는 AuthenticationPrincipal이다.<br />
+<br />
+
+로그인 객체를 가져오는 방법으로는 SecurityContextHolder, Principal, @AuthenticationPrincipal이 있다.<br />
+모든 내용은 공식 문서 https://docs.spring.io/spring-security/reference/servlet/integrations/servlet-api.html#servletapi-remote-user 를 참고하였다.
+<br />
+<hr />
+<br />
+
+<b>1. SecurityContextHolder를 사용하는 방법</b><br />
+<br />
+HttpServletRequest.getRemoteUser()은 현재 사용자 이름을 반환하는 SecurityContextHolder.getContext().getAuthentication().getName()의 결과를 반환한다.<br />
+이를 이용하여 null이 리턴된다면 사용자가 인증되었는지 아니면 익명인지 여부를 결정할 수 있다.<br />
+사용자가 인증되었는지 여부를 파악하는 것은 특정 UI 요소가 표시되어야 하는지 여부를 결정하는 데 유용할 수 있다.<br />
+ex) 로그아웃 링크는 사용자가 인증된 경우에만 표시<br />
+<br />
+<br />
+
+HttpServletRequest.getUserPrincipal()은 SecurityContextHolder.getContext().getAuthentication()의 결과를 반환한다.<br />
+사용자 이름과 비밀번호를 사용한 인증을 사용할 때 UsernamePasswordAuthenticationToken의 인스턴스이다.<br />
+사용자에 대한 추가 정보가 필요한 경우 유용할 수 있다.<br />
+<br />
+
+```
+// 사용자의 Principal 정보를 가져온다.
+Authentication auth = httpServletRequest.getUserPrincipal();
+
+//UserDetails의 인스턴스
+MyCustomUserDetails userDetails = (MyCustomUserDetails) auth.getPrincipal();
+
+// UserDetails에서 사용자의 이름을 가져온다.
+String firstName = userDetails.getFirstName();
+// UserDetails에서 사용자의 성을 가져온다.
+String lastName = userDetails.getLastName();
+```
+
+<br />
+<br />
+HttpServletRequest.getUserPrincipal()는 SecurityContextHolder.getContext().getAuthentication()의 결과를 반환한다.<br />
+사용자 이름과 비밀번호 기반 인증을 사용할 때 UsernamePasswordAuthenticationToken의 인스턴스입니다.<br />
+이 메서드는 사용자에 대한 추가 정보가 필요한 경우 유용하다.<br />
+<br />
+
+```
+// HttpServletRequest.getUserPrincipal()를 통해 현재 사용자의 인증 정보를 가져온다.
+Authentication auth = httpServletRequest.getUserPrincipal();
+
+MyCustomUserDetails userDetails = (MyCustomUserDetails) auth.getPrincipal();
+
+// 사용자의 성과 이름을 가져온다.
+String firstName = userDetails.getFirstName();
+String lastName = userDetails.getLastName();
+```
+
+HttpServletRequest.isUserInRole(String) 메서드는 SecurityContextHolder.getContext().getAuthentication().getAuthorities()에서<br />
+isUserInRole(String)로 전달된 역할을 가진 GrantedAuthority가 포함되어 있는지 여부를 결정한다.<br />
+주의할 점은 ROLE_이 자동으로 붙기 때문에 따로 ROLE_을 붙이지 않아야 한다는 것.<br />
+<br />
+
+```
+boolean isAdmin = httpServletRequest.isUserInRole("ADMIN");
+```
 
 
+
+<b>2. Principal을 사용하는 방법</b><br/>
+<br/>
+
+```
+@Controller 
+public class MyController { 
+
+    @GetMapping("/username") 
+    @ResponseBody 
+    public String currentUserName(Principal principal) { 
+       User user = myRepository.findByUsername(principal.getName());
+       return user;
+    } 
+}
+```
+<br />
+Principal을 사용한다면 위의 코드처럼 Controller에서 유저 정보를 불러올 수 있다..<br />
+그러나 Principal은 Spring Security의 객체가 아니라 Java의 객체이기 때문에 getName()외에는 사용할만한 메서드가 없다.<br />
+Principal 대신 Authentication 객체를 인자로 받도록 하는 코드도 가능하다.<br />
+<br />
+
+```
+@Controller 
+public class MyController { 
+
+    @GetMapping("/username") 
+    @ResponseBody 
+    public String currentUserName(Authentication authentication) { 
+	User user = (User) authentication.getPrincipal();
+	return user;
+    } 
+}
+```
+<br />
+Authentication 객체를 얻은 다음 getPrincipal()을 호출하여 Principal객체를 얻을 수 있다.<br />
+단, getPrincipal()은 java.util.Object 타입을 반환하므로 원하는 타입으로 변환을 해야 하니 주의하자.<br />
+@AuthenticationPrincipal을 사용한 예는 다음과 같다. <br />
+
+<b>3. @AuthenticationPrincipal을 사용하는 방법</b><br />
+1번과 2번과 같은 방법들은 보안과 관련 없는 코드들이 혼재하여 비효율적이며, 기능적인 부분에서 다양하지 않다는 단점이 있다.<br />
+Spring Security 3.2부터는 @AuthenticationPrincipal 어노테이션으로 Custom 로그인 객체를 가져올 수 있다.
+<br />
+
+```
+@Controller 
+public class MyController { 
+
+    @GetMapping("/username") 
+    @ResponseBody 
+    public String currentUserName(@AuthenticationPrincipal User user) { 
+	return user;
+    } 
+}
+```
+
+@AuthenticationPrincipal의 장점은 타입 변환이 필요 없고 Authentication과 동일하게 보안 특정 코드만 갖는다.<br />
+또한 커스텀 로그인 객체를 가져올 수 있기 때문에 기능적 활용도가 높다.<br />
+
+<hr />
 
 
 ## 24-02-26
