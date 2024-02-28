@@ -11,7 +11,7 @@
 <br />
 
 ## 24-02-28
-<b>formLogin 메서드에 대하여.</b>
+<b>formLogin 메서드에 대하여.</b><br />
 formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개변수로 받아 폼 로그인을 커스터마이즈 할 수 있게 해준다.<br />
 기존 .formLogin().loginPage("/login").usernameParameter()......의 방식에서<br />
 <br />
