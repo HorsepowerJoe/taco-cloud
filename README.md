@@ -28,6 +28,7 @@ formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개�
 <br />
 위 방식으로 구현하도록 변경, 권장되었다. <br />
 로그아웃 또한 마찬가지로 다음과 같다.<br />
+<br />
 
 ```
 .logout(logout -> { logout
@@ -38,6 +39,7 @@ formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개�
 
                 })
 ```
+<br />
 
 그러나 이번에는 백엔드를 Rest Api로 사용할것이기 때문에 폼 로그인을 사용하지 않고 다른 방식으로 구현하여야 하기 때문에 <br />
 부득이하게 새로운 프로젝트를 생성하여 타임리프와 스프링 사용으로 전환하여야 했다. <br />
@@ -100,6 +102,7 @@ String firstName = userDetails.getFirstName();
 String lastName = userDetails.getLastName();
 ```
 
+<br />
 HttpServletRequest.isUserInRole(String) 메서드는 SecurityContextHolder.getContext().getAuthentication().getAuthorities()에서<br />
 isUserInRole(String)로 전달된 역할을 가진 GrantedAuthority가 포함되어 있는지 여부를 결정한다.<br />
 주의할 점은 ROLE_이 자동으로 붙기 때문에 따로 ROLE_을 붙이지 않아야 한다는 것.<br />
@@ -167,6 +170,7 @@ public class MyController {
 }
 ```
 
+<br />
 @AuthenticationPrincipal의 장점으로는 타입 변환이 필요 없고 Authentication과 동일하게 보안 특정 코드만 갖는다.<br />
 또한 Custom 로그인 객체를 가져올 수 있기 때문에 기능적 활용도가 높다는 것이다.<br />
 <br />
