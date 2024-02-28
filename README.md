@@ -108,7 +108,7 @@ isUserInRole(String)로 전달된 역할을 가진 GrantedAuthority가 포함되
 ```
 boolean isAdmin = httpServletRequest.isUserInRole("ADMIN");
 ```
-
+<br />
 
 
 <b>2. Principal을 사용하는 방법</b><br/>
