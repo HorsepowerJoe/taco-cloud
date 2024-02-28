@@ -147,11 +147,12 @@ public class MyController {
 <br />
 Authentication 객체를 얻은 다음 getPrincipal()을 호출하여 Principal객체를 얻을 수 있다.<br />
 단, getPrincipal()은 java.util.Object 타입을 반환하므로 원하는 타입으로 변환을 해야 하니 주의하자.<br />
-@AuthenticationPrincipal을 사용한 예는 다음과 같다. <br />
+
 
 <b>3. @AuthenticationPrincipal을 사용하는 방법</b><br />
 1번과 2번과 같은 방법들은 보안과 관련 없는 코드들이 혼재하여 비효율적이며, 기능적인 부분에서 다양하지 않다는 단점이 있다.<br />
 Spring Security 3.2부터는 @AuthenticationPrincipal 어노테이션으로 Custom 로그인 객체를 가져올 수 있다.
+@AuthenticationPrincipal을 사용한 예는 다음과 같다. <br />
 <br />
 
 ```
@@ -166,10 +167,15 @@ public class MyController {
 }
 ```
 
-@AuthenticationPrincipal의 장점은 타입 변환이 필요 없고 Authentication과 동일하게 보안 특정 코드만 갖는다.<br />
-또한 커스텀 로그인 객체를 가져올 수 있기 때문에 기능적 활용도가 높다.<br />
+@AuthenticationPrincipal의 장점으로는 타입 변환이 필요 없고 Authentication과 동일하게 보안 특정 코드만 갖는다.<br />
+또한 Custom 로그인 객체를 가져올 수 있기 때문에 기능적 활용도가 높다는 것이다.<br />
+<br />
+이제 스프링 시큐리티 챕터가 모두 끝났다. 책은 Thymeleaf와 구버전 Spring Security를 사용하여 작성되었기 때문에 시간이 많이 걸리고 있다.<br />
+책의 환경과 같이 taco-cloud-with-thymeleaf-and-low-spring-version을 구성하였으니 이제 두 마리 토끼를 잡을 수 있다.<br />
+<br />
+다음은 쉬어가는 챕터 구성 속성 사용하기.<br />
+학원에서 배운 내용들이기에 복습 개념으로 읽어보면 되겠다.<br />
 
-<hr />
 
 
 ## 24-02-26
