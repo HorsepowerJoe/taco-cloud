@@ -41,7 +41,7 @@ formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개�
 ```
 <br />
 
-그러나 이번에는 백엔드를 Rest Api로 사용할것이기 때문에 폼 로그인을 사용하지 않고 다른 방식으로 구현하여야 하기 때문에 <br />
+그러나 이번에는 백엔드를 RESTful Api로 사용할것이기 때문에 폼 로그인을 사용하지 않고 다른 방식으로 구현하여야 하기 때문에 <br />
 부득이하게 새로운 프로젝트를 생성하여 타임리프와 스프링 사용으로 전환하여야 했다. <br />
 새로운 마이그레이션 브랜치 taco-cloud-with-thymeleaf-and-low-spring-version를 만들어보자.<br />
 <br />
