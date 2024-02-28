@@ -10,6 +10,44 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+## 24-02-28
+<b>formLogin 메서드에 대하여.</b>
+formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개변수로 받아 폼 로그인을 커스터마이즈 할 수 있게 해준다.<br />
+기존 .formLogin().loginPage("/login").usernameParameter()......의 방식에서<br />
+<br />
+
+```
+.formLogin(formLogin->{ formLogin
+                            .usernameParameter("username")
+                            .passwordParameter("password")
+                            .loginPage("/login")
+                            .loginProcessingUrl("/api/login")
+                            .defaultSuccessUrl("/design", true);
+                        })
+```
+<br />
+위 방식으로 구현하도록 변경, 권장되었다. <br />
+로그아웃 또한 마찬가지로 다음과 같다.<br />
+
+```
+.logout(logout -> { logout
+			.deleteCookies("remove")
+			.invalidateHttpSession(false)
+			.logoutUrl("/logout")
+			.logoutSuccessUrl("/");
+
+                })
+```
+
+그러나 이번에는 백엔드를 Rest Api로 사용할것이기 때문에 폼 로그인을 사용하지 않고 다른 방식으로 구현하여야 하기 때문에 <br />
+부득이하게 새로운 프로젝트를 생성하여 타임리프와 스프링 사용으로 전환하여야 했다. <br />
+새로운 마이그레이션 브랜치를 만들어보자.<br />
+<br />
+<hr />
+
+
+
+
 ## 24-02-26
 UserDetails 인터페이스를 구현한 User 클래스에 대하여. <br />
 <br />
