@@ -12,7 +12,8 @@
 
 
 ## 24-02-29
-<b>JWT를 이용하여 Stateless한 인증 구현하기.</b>
+<b>JWT를 이용하여 Stateless한 인증 구현하기.</b><br />
+<br />
 책의 내용은 formLogin을 이용한 세션방식의 Stateful한 인증 구현이었다.<br />
 그러나 나의 경우는 Vue와 Spring을 연동하여 백엔드를 Stateless하게 구현하여야 하기 때문에 책의 내용을 따라가지 않고,<br />
 별도의 브랜치인 taco-cloud-with-thymeleaf-and-low-spring-version에 세션 방식의 로그인을 구현하였다.<br />
