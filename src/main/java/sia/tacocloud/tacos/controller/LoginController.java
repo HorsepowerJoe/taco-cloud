@@ -13,13 +13,13 @@ import sia.tacocloud.tacos.service.LoginService;
 
 @RestController
 @RequiredArgsConstructor
-// @RequestMapping("/api/login")
+@RequestMapping("/api/login")
 public class LoginController {
-    // private final LoginService loginService;
+   
 
-    // @PostMapping()
-    // public ResponseEntity<Object> login(@RequestBody User user) {
-    //    return loginService.login(user);
-    // }
+    @PostMapping()
+    public String login(@RequestBody User user) {
+       return "";
+    }
     
 }

@@ -33,7 +33,10 @@ const loginForm = ref({
 });
 
 const onSubmit = () => {
-    axios.post('/api/login',loginForm.value).then(resp=>{console.log(resp)}).catch(e=>{alert(e.response.data)});
+  const formdata = new FormData();
+  formdata.append('username', loginForm.value.username);
+  formdata.append('password', loginForm.value.password);
+    axios.post('/api/login',formdata).then(resp=>{console.log(resp)}).catch(e=>{alert(e)});
 }
  
 </script>

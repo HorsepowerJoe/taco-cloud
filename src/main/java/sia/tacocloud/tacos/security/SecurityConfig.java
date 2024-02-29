@@ -7,17 +7,21 @@ import java.util.function.Supplier;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
+import sia.tacocloud.tacos.jwt.LoginFilter;
 import sia.tacocloud.tacos.repository.UserRepository;
 
 @Configuration
@@ -25,7 +29,8 @@ import sia.tacocloud.tacos.repository.UserRepository;
 @RequiredArgsConstructor
 public class SecurityConfig {
     // private final DataSource dataSource;
-    private final UserRepository userRepository;
+    private final AuthenticationConfiguration authenticationConfiguration;
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -33,8 +38,16 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception{
+        return configuration.getAuthenticationManager();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/design", "/orders")
                         .hasRole("USER")
@@ -44,22 +57,7 @@ public class SecurityConfig {
                         .access(this::permitAll)
                         .anyRequest()
                         .permitAll())
-                .formLogin(formLogin -> {
-                    formLogin
-                            .usernameParameter("username")
-                            .passwordParameter("password")
-                            .loginPage("/login")
-                            .loginProcessingUrl("/processinglogin")
-                            .defaultSuccessUrl("/design", true);
-                })
-                .logout(logout -> {
-                    logout
-                            .deleteCookies("remove")
-                            .invalidateHttpSession(false)
-                            .logoutUrl("/logout")
-                            .logoutSuccessUrl("/");
-
-                })
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(withDefaults());
 
         return http.build();
@@ -89,12 +87,20 @@ public class SecurityConfig {
         }
     }
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return new UserRepositoryUserDetailsService(userRepository);
-    }
+   
 
-    
+
+
+
+
+
+
+
+
+
+
+
+
 
     // @Bean
     // public JdbcUserDetailsManager jdbcUserDetailsService() {
