@@ -19,7 +19,7 @@
 별도의 브랜치인 taco-cloud-with-thymeleaf-and-low-spring-version에 세션 방식의 로그인을 구현하였다.<br />
 <br />
 
-Stateless와 Stateful 그리고 RESTful 하다는 것은 무엇이고. 왜 나는 Stateless한 구현을 하여야 하는지에 대한 정리가 필요했다.<br />
+Stateless와 Stateful 그리고 RESTful 하다는 것은 무엇이고, 왜 나는 Stateless한 구현을 하여야 하는지에 대한 정리가 필요했다.<br />
 무작정 '난 그냥 그렇게 하기로 했으니까 REST고 Stateless야' 라고 근거없이 우기기는 싫었기 때문이다. <br />
 <br />
 
