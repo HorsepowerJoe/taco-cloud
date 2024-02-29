@@ -150,7 +150,8 @@ public class MyController {
 <br />
 Authentication 객체를 얻은 다음 getPrincipal()을 호출하여 Principal객체를 얻을 수 있다.<br />
 단, getPrincipal()은 java.util.Object 타입을 반환하므로 원하는 타입으로 변환을 해야 하니 주의하자.<br />
-
+<br />
+<br />
 
 <b>3. @AuthenticationPrincipal을 사용하는 방법</b><br />
 1번과 2번과 같은 방법들은 보안과 관련 없는 코드들이 혼재하여 비효율적이며, 기능적인 부분에서 다양하지 않다는 단점이 있다.<br />
