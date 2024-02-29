@@ -10,6 +10,374 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+
+## 24-02-29
+<b>JWT를 이용하여 Stateless한 인증 구현하기.</b><br />
+<br />
+책의 내용은 formLogin을 이용한 세션방식의 Stateful한 인증 구현이었다.<br />
+그러나 나의 경우는 Vue와 Spring을 연동하여 백엔드를 Stateless하게 구현하여야 하기 때문에 책의 내용을 따라가지 않고,<br />
+별도의 브랜치인 taco-cloud-with-thymeleaf-and-low-spring-version에 세션 방식의 로그인을 구현하였다.<br />
+<br />
+
+Stateless와 Stateful 그리고 RESTful 하다는 것은 무엇이고, 왜 나는 Stateless한 구현을 하여야 하는지에 대한 정리가 필요했다.<br />
+무작정 '난 그냥 그렇게 하기로 했으니까 REST고 Stateless야' 라고 근거없이 우기기는 싫었기 때문이다. <br />
+<br />
+
+일단 나의 경우는 프론트엔드와 백엔드가 분리되어 있는 구조이다. <br />
+Vue는 클라이언트 사이드에서 실행되기 때문에 클라이언트 사이드 처리는 WAS에서 직접적으로 이루어지지 않는다. <br />
+<br />
+
+Vue는 클라이언트 측에서 실행되기 때문에, 페이지 라우팅은 클라이언트 측에서 처리된다. <br />
+유저가 브라우저에서 192.168.0.100:8080/design등의 주소로 요청을 보내면, 이 요청은 WAS에 도달하게 되지만 <br />
+WAS는 해당 요청을 받아서 리액트 애플리케이션의 라우팅을 처리하는 것이 아니라, 단순히 정적 파일을 제공하는 역할만 수행한다. <br />
+<br />
+
+WAS는 요청된 주소에 대한 정적 파일(빌드된 HTML, CSS, JavaScript 파일 등)을 제공하게 되고<br />
+클라이언트 사이드에서는 라우터가 해당 주소에 대한 뷰를 렌더링하고 사용자에게 보여주게 된다. <br />
+<br />
+
+이것을 CSR 즉, Client Side Rendering이라고 한다.<br />
+<br />
+
+CSR의 장점으로는 View 렌더링을 브라우저에서 하기 때문에 트래픽이 감소하고, 페이지를 넘어갈 때에 새로고침이 발생하지 않아 네이티브 앱과 비슷한 경험을 할 수 있다.<br />
+단점으로는 서버에 처음으로 요청을 하게 되면 전체 페이지에 대한 모든 문서 파일을 받기 때문에 서버 사이드 렌더링보다는 속도가 느린 점이 있다.<br />
+<br />
+
+JSP나 Thymeleaf를 사용한 서버 사이드 렌더링 방식에서는 페이지마다 요청과 응답이 이루어지기 때문에 서버에서 이용자의 상태를 저장하기 편하다는 이점이 있다.<br />
+그로 인하여 서버 측에서 세션을 사용해서 사용자의 로그인 상태나 기타 상태 정보를 유지하고 관리할 수 있다.<br />
+<br />
+
+반면에 Vue와 같은 클라이언트 측 렌더링 기술을 사용하는 경우에는 일반적으로 페이지 간의 이동이 AJAX를 통해 이루어지며<br />
+페이지가 변경될 때마다 서버에 새로운 요청을 보내지 않기 때문에 서버 측에서 이용자의 상태를 저장하기가 어렵다.<br />
+<br />
+
+그렇기 때문에 프론트와 백엔드가 분리되어 클라이언트 사이드에서 상태를 관리하며, 서버와 통신이 필요할 시에는 REST API를 이용하여 Stateless한 통신을 하는 것이 바람직하다.<br />
+<br />
+
+REST API로 Stateless한 인증/인가를 구현하는 방법으로는 대표적으로 Oauth와 JWT가 있는데. 나는 둘 다 전부 다 구현하여 어떻게 사용하는지 요목조목 살펴볼 예정이다.<br />
+처음으로는 JWT를 사용하여 Stateless한 구현을 시작하기로 했다.<br />
+<br />
+
+JWT를 사용하여 인증/인가를 구현하려면 커스텀 필터를 사용하여야 한다.<br />
+기존의 formLogin이나 httpBasic을 모두 disable하여 주고, REST API의 경우에는 CSRF공격에 취약하지 않기 때문에 csrf도 disable 한다.<br />
+formLogin과 httpBasic을 disable하면 UsernamePasswordAuthenticationFilter가 꺼지게 되는데 JWT인증을 위해 UsernamePasswordAuthenticationFilter를 커스터마이즈 하여 커스텀 필터로써 사용하면 된다.<br />
+<br />
+
+```
+package sia.tacocloud.tacos.jwt;
+
+import java.io.IOException;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+public class LoginFilter extends UsernamePasswordAuthenticationFilter {
+    private final AuthenticationManager authenticationManager;
+
+    public LoginFilter(AuthenticationManager authenticationManager){
+        this.authenticationManager = authenticationManager;
+        setFilterProcessesUrl("/api/login");
+    }
+
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
+            throws AuthenticationException {
+        String username = obtainUsername(request);
+        String password = obtainPassword(request);
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(username, password);
+        return authenticationManager.authenticate(authToken);
+    }
+
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+            Authentication authResult) throws IOException, ServletException {
+        System.out.println("성공");
+    }
+
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
+            AuthenticationException failed) throws IOException, ServletException {
+                System.out.println("실패");
+        
+    }
+
+    
+
+}
+
+```
+
+<br />
+여기서 평소에 사용하지 않았던 생성자 주입 방식을 사용하였는데 그 이유는 UsernamePasswordAuthenticationFilter의 기본 주소가 /login으로 되어 있기 때문이다.<br />
+나는 Vue의 라우팅을 nonApiPattern으로 작성하고, API요청의 경우에는 /api/**의 패턴으로 작성하였기 때문의 기본 /login 주소를 변경할 필요가 있었다.<br />
+<br />
+
+```
+ public LoginFilter(AuthenticationManager authenticationManager){
+        this.authenticationManager = authenticationManager;
+        setFilterProcessesUrl("/api/login");
+    }
+```
+
+<br />
+생성자 주입을 사용하여 authenticationManager를 주입하고 setFilterProcessesUrl로 기본 주소를 /api/login으로 초기화 하였다.<br />
+attemptAuthentication에서는 username과 password를 받아 검증을 담당하는 객체로 자료를 넘겨주는데, 넘겨주기 위해서는<br />
+UsernamePasswordAuthenticationToken객체에 담아 보내주어야 한다.<br />
+이렇게 보내진 UsernamePasswordAuthenticationToken은 AuthenticationManager에서 검증을 거치고<br />
+검증이 완료되면 successfulAuthentication이 동작되며<br />
+그렇지 못한 경우에는 unsuccessfulAuthentication이 작동하게 된다.<br />
+필터를 구현하였다면 SecurityFilterChain에 해당 Filter를 등록해 주어야 한다.<br />
+<br />
+
+
+```
+ @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers("/design", "/orders")
+                        .hasRole("USER")
+                        .requestMatchers("/api/design", "/api/design")
+                        .access(this::hasRole)
+                        .requestMatchers("/", "/**", "/api/**")
+                        .access(this::permitAll)
+                        .anyRequest()
+                        .permitAll())
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class)
+                .httpBasic(withDefaults());
+
+        return http.build();
+    }
+```
+
+<br />
+위에서는 addFilterAt을 사용하였는데, 그 이유는 formLogin과 httpBasic을 disable 하였기 때문이다.<br />
+UsernamePasswordAuthenticationFilter가 비활성화 되었기 때문에 해당 자리에 원하는 필터를 주입하는 addFilterAt를 사용하여 등록시켰다.<br />
+이제 LoginFilter는 UsernamePasswordAuthenticationFilter의 위치에서 UsernamePasswordAuthenticationFilter대신 사용된다.<br />
+<br />
+<hr />
+<br />
+<p><b>DB기반 로그인 검증 로직</b></p>
+로그인 요청이 POST로 날아오게 되면 LoginFilter를 타고 AuthenticationManager로 넘어오게 된다. <br />
+그렇게 되면 UserDetailsService가 UserRepository에서 데이터를 꺼내 와 UserDetails로 넘겨주고 최종적으로 AuthenticationManager에서 검증하게 된다.<br />
+<br />
+
+먼저 UserDetailsService의 구현체인 CustomUserDetailsService를 구현해보자.<br />
+<br />
+
+```
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class CustomUserDetailsService implements UserDetailsService{
+    private final UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username);
+        if (user != null) {
+            System.out.println("find username : "+user.getUsername());
+            return new CustomUserDetails(user);
+        }
+        return null;
+
+    }
+    
+}
+
+```
+
+<br />
+Spring Security는 UserDetailsService의 loadUserByUsername을 통해 username으로 UserRepository에서 username으로 된 User를 조회한다.<br />
+그 이후에는 UserDetails에 User객체를 담아 AuthenticationManager로 보내주게 된다.<br />
+이제 UserDetails의 구현체인 CustomUserDetails를 만들어보자.<br />
+<br />
+
+```
+@RequiredArgsConstructor
+public class CustomUserDetails implements UserDetails {
+    private final User user;
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+
+        Collection<GrantedAuthority> collection = new ArrayList<>();
+
+        collection.add(new GrantedAuthority() {
+
+            @Override
+            public String getAuthority() {
+                return user.getRole();
+            }
+
+        });
+
+        return collection;
+
+    }
+
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return user.getUsername();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+       return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+       return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+       return true;
+    }
+
+}
+```
+
+<br />
+이전에 공부했던 내용이라 따로 정리를 할 부분이 없다. <br />
+조회 된 userdata를 기반으로 각각의 속성들을 셋업하여 반환하도록 구현하면 된다.<br />
+그러나 getAuthority 메서드의 경우에는 GrantedAuthority객체로 Collection에 add하여야 하는데 GrantedAuthority의 getAuthority를 오버라이드 하여 user의 Role을 return하도록 구현하면 된다.<br />
+<br />
+
+이제 검증 단계가 끝마쳐지게 되면 검증 여부에 따라 successfulAuthentication 또는 unsuccessfulAuthentication이 작동하게 된다.<br />
+프론트에서는 /api/login으로 data를 담아 axios를 보내게 되어 있는데. 여기서 중요한 점은 formdata로 post를 보내야 한다는 것이다.<br />
+new FormData()를 사용하여 post를 보내면 서버에서 아주 잘 받는다.<br />
+사소한 트러블슈팅이었다. <br />
+<br />
+<hr />
+<br />
+
+이제 JWT를 사용할 차례이다.<br />
+그러나 JWT를 사용하기에 앞서 JWT는 무엇이고 Oauth와는 어떤 차이가 있는지 가볍게 정리를 하고 넘어가보자.<br />
+<br />
+
+JWT 토큰은 header, payload, signature 세 부분으로 이루어지며 각 구역이 " . " 기호로 구분된다.<br />
+header에는 토큰의 유형과 서명 알고리즘이 명시되고, payload에는 사용자의 인증/인가 정보가(claim), signature에는 헤더와 페이로드가 비밀키로 서명되어 저장된다.<br />
+<br />
+장점으로는 토큰 자체에 사용자의 정보가 저장되어 있어있기 때문에 서버 입장에서 토큰을 검증만 해주면 된다는 점.<br />
+쿠키나 세션의 경우에는 로그인한 모든 사용자의 세션을 DB나 캐시에 저장해놓고 쿠키로 넘어온 세션 ID로 사용자 데이터를 매번 조회해야 하는 번거로움이 있었지만 JWT는 그렇지 않다.<br />
+<br />
+단점으로는 사용자 추적이 어렵다는 점이다.<br />
+매우 한정된 정보만이 클레임에 담기기 때문에 클레임에 담긴 정보 외에는 추적에 어려움이 있다.<br />
+ex) 로그인 된 전체 사용자의 운영체제 알기<br />
+<br />
+OAuth는 성격이 조금 다르다.<br />
+간단하게 정리하면 인증을 다른 서버에 맡기게 되고, 외부 서버에서 인증이 끝나게 되면 받는 토큰을 이용하여 나의 어플리케이션에 권한을 요청하는 방식이다.<br />
+그래서 인증보다는 인가의 목적이 크다. <br />
+<br />
+장점으로는 외부 서버에 인증을 맡기기 때문에 보안성이 높으며<br />
+사용자가 직접 로그인 정보를 제공하지 않고도 다른 서비스의 인증을 통해 애플리케이션에 액세스할 수 있다는 점이다.<br />
+<br />
+단점으로는 사용자 인증보다는 인가에 초점을 맞추고 있기 때문에 사용자 추적이 어려울 수 있고<br />
+외부 서버와의 의존성이 있기 때문에 외부 서버에 장애가 발생하면 당연히 내 애플리케이션에도 문제가 생긴다는 점이다.<br />
+<br />
+
+
+<p><b>JWTUtil 클래스</b></p>
+최신 버전의 JWT의 경우에는 SecretKey를 기존의 String키를 사용하는 것이 아닌 객체키를 사용하여야 한다.<br />
+
+객체키를 만드는 방법은 다음과 같다.<br />
+<br />
+
+```
+@Component
+public class JWTUtil {
+    private SecretKey secretKey;
+
+    public JWTUtil(@Value("${spring.jwt.secret}")String secret){
+        this.secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
+    }
+}
+```
+
+<br />
+secret.getBytes(StandardCharsets.UTF_8) 이 부분은 SecretKey를 UTF-8 문자 인코딩을 사용하여 byte 배열로 변환한다.<br />
+Jwts.SIG.HS256.key().build().getAlgorithm() 이 부분은 HS256(HMAC-SHA256) 알고리즘을 사용하는 JWT 생성을 위한 HS256 알고리즘의 키를 가져온다.<br />
+그런 다음, SecretKeySpec 생성자에 위의 두 부분을 전달하여 암호화 알고리즘과 비밀 키를 설정하여 JWT 서명을 생성하는 데 사용될 것이다.<br />
+<br />
+
+이제 검증을 진행하기 위해 token을 전달받아 username을 뽑아내는 getUsername, Role값을 뽑아내는 getRole, 토큰이 만료되었는지 확인할 isExpired와 <br />
+로그인이 성공했을 때 SuccessfulHandler를 통해서 username, role, Expired 시간을 전달받아 응답해주는 토큰 생성 메서드인 createJwt메서드를 구현해보자.<br />
+코드는 다음과 같다.<br />
+<br />
+
+```
+@Component
+public class JWTUtil {
+    private final SecretKey SECRET_KEY;
+
+    public JWTUtil(@Value("${spring.jwt.secret}")String secret){
+        this.SECRET_KEY = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
+    }
+
+    public String getUsername(String token){
+        return Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().get("username", String.class);
+    }
+
+    public String getRole(String token){
+        return Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().get("role", String.class);
+    }
+
+    public boolean isExpired(String token){
+        return Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+    }
+
+    public String createJwt(String username, String role, Long expireMs){
+
+        return Jwts.builder()
+                   .claim("username", username)
+                   .claim("role", role)
+                   .issuedAt(new Date(System.currentTimeMillis()))
+                   .expiration(new Date(System.currentTimeMillis() + expireMs))
+                   .signWith(SECRET_KEY)
+                   .compact();
+    }
+
+}
+```
+
+
+Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().get("username", String.class);
+암호화 된 토큰을 Jwts.parser()의 verifyWith 메서드를 통해 SECRET_KEY로 토큰을 검증하고 빌더 타입으로 리턴해준 뒤에<br />
+parseSignedClaims메서드로 토큰의 클레임을 확인하고, getPayload().get()으로 페이로드를 가져와 리턴한다.<br />
+<br />
+
+getRole메서드도 동일한 구조를 가지고 있다.<br />
+isExpired메서드의 경우에는 getExpiration 메서드로 만료시간을 가져와 before메서드로 현재 시간을 넣어주어 만료 여부를 검증한다.<br />
+만료 여부에 따라 boolean이 return된다.<br />
+<br />
+
+createJwt같은 경우는 따로 정리를 할 것이 없다.<br />
+클레임에는 외부에 공개되어도 상관 없는 정보만 넣어야 한다는 것 정도..<br />
+
+
 ## 24-02-28
 <b>formLogin 메서드에 대하여.</b><br />
 formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개변수로 받아 폼 로그인을 커스터마이즈 할 수 있게 해준다.<br />
@@ -28,6 +396,7 @@ formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개�
 <br />
 위 방식으로 구현하도록 변경, 권장되었다. <br />
 로그아웃 또한 마찬가지로 다음과 같다.<br />
+<br />
 
 ```
 .logout(logout -> { logout
@@ -38,13 +407,147 @@ formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개�
 
                 })
 ```
+<br />
 
-그러나 이번에는 백엔드를 Rest Api로 사용할것이기 때문에 폼 로그인을 사용하지 않고 다른 방식으로 구현하여야 하기 때문에 <br />
+그러나 이번에는 백엔드를 RESTful Api로 사용할것이기 때문에 폼 로그인을 사용하지 않고 다른 방식으로 구현하여야 하기 때문에 <br />
 부득이하게 새로운 프로젝트를 생성하여 타임리프와 스프링 사용으로 전환하여야 했다. <br />
-새로운 마이그레이션 브랜치를 만들어보자.<br />
+새로운 마이그레이션 브랜치 taco-cloud-with-thymeleaf-and-low-spring-version를 만들어보자.<br />
 <br />
 <hr />
+이제 책의 내용을 따라갈 수 있게 되었다<br />
+스프링 시큐리티의 마지막 챕터 사용자 인지하기 챕터이다.<br />
+핵심적인 키워드는 AuthenticationPrincipal이다.<br />
+<br />
 
+로그인 객체를 가져오는 방법으로는 SecurityContextHolder, Principal, @AuthenticationPrincipal이 있다.<br />
+모든 내용은 공식 문서 https://docs.spring.io/spring-security/reference/servlet/integrations/servlet-api.html#servletapi-remote-user 를 참고하였다.
+<br />
+<hr />
+<br />
+
+<b>1. SecurityContextHolder를 사용하는 방법</b><br />
+<br />
+HttpServletRequest.getRemoteUser()은 현재 사용자 이름을 반환하는 SecurityContextHolder.getContext().getAuthentication().getName()의 결과를 반환한다.<br />
+이를 이용하여 null이 리턴된다면 사용자가 인증되었는지 아니면 익명인지 여부를 결정할 수 있다.<br />
+사용자가 인증되었는지 여부를 파악하는 것은 특정 UI 요소가 표시되어야 하는지 여부를 결정하는 데 유용할 수 있다.<br />
+ex) 로그아웃 링크는 사용자가 인증된 경우에만 표시<br />
+<br />
+<br />
+
+HttpServletRequest.getUserPrincipal()은 SecurityContextHolder.getContext().getAuthentication()의 결과를 반환한다.<br />
+사용자 이름과 비밀번호를 사용한 인증을 사용할 때 UsernamePasswordAuthenticationToken의 인스턴스이다.<br />
+사용자에 대한 추가 정보가 필요한 경우 유용할 수 있다.<br />
+<br />
+
+```
+// 사용자의 Principal 정보를 가져온다.
+Authentication auth = httpServletRequest.getUserPrincipal();
+
+//UserDetails의 인스턴스
+MyCustomUserDetails userDetails = (MyCustomUserDetails) auth.getPrincipal();
+
+// UserDetails에서 사용자의 이름을 가져온다.
+String firstName = userDetails.getFirstName();
+// UserDetails에서 사용자의 성을 가져온다.
+String lastName = userDetails.getLastName();
+```
+
+<br />
+<br />
+HttpServletRequest.getUserPrincipal()는 SecurityContextHolder.getContext().getAuthentication()의 결과를 반환한다.<br />
+사용자 이름과 비밀번호 기반 인증을 사용할 때 UsernamePasswordAuthenticationToken의 인스턴스이다.<br />
+이 메서드는 사용자에 대한 추가 정보가 필요한 경우 유용하다.<br />
+<br />
+
+```
+// HttpServletRequest.getUserPrincipal()를 통해 현재 사용자의 인증 정보를 가져온다.
+Authentication auth = httpServletRequest.getUserPrincipal();
+
+MyCustomUserDetails userDetails = (MyCustomUserDetails) auth.getPrincipal();
+
+// 사용자의 성과 이름을 가져온다.
+String firstName = userDetails.getFirstName();
+String lastName = userDetails.getLastName();
+```
+
+<br />
+HttpServletRequest.isUserInRole(String) 메서드는 SecurityContextHolder.getContext().getAuthentication().getAuthorities()에서<br />
+isUserInRole(String)로 전달된 역할을 가진 GrantedAuthority가 포함되어 있는지 여부를 결정한다.<br />
+주의할 점은 ROLE_이 자동으로 붙기 때문에 따로 ROLE_을 붙이지 않아야 한다는 것.<br />
+<br />
+
+```
+boolean isAdmin = httpServletRequest.isUserInRole("ADMIN");
+```
+<br />
+
+
+<b>2. Principal을 사용하는 방법</b><br/>
+<br/>
+
+```
+@Controller 
+public class MyController { 
+
+    @GetMapping("/username") 
+    @ResponseBody 
+    public String currentUserName(Principal principal) { 
+       User user = myRepository.findByUsername(principal.getName());
+       return user;
+    } 
+}
+```
+<br />
+Principal을 사용한다면 위의 코드처럼 Controller에서 유저 정보를 불러올 수 있다..<br />
+그러나 Principal은 Spring Security의 객체가 아니라 Java의 객체이기 때문에 getName()외에는 사용할만한 메서드가 없다.<br />
+Principal 대신 Authentication 객체를 인자로 받도록 하는 코드도 가능하다.<br />
+<br />
+
+```
+@Controller 
+public class MyController { 
+
+    @GetMapping("/username") 
+    @ResponseBody 
+    public String currentUserName(Authentication authentication) { 
+	User user = (User) authentication.getPrincipal();
+	return user;
+    } 
+}
+```
+<br />
+Authentication 객체를 얻은 다음 getPrincipal()을 호출하여 Principal객체를 얻을 수 있다.<br />
+단, getPrincipal()은 java.util.Object 타입을 반환하므로 원하는 타입으로 변환을 해야 하니 주의하자.<br />
+<br />
+<br />
+
+<b>3. @AuthenticationPrincipal을 사용하는 방법</b><br />
+1번과 2번과 같은 방법들은 보안과 관련 없는 코드들이 혼재하여 비효율적이며, 기능적인 부분에서 다양하지 않다는 단점이 있다.<br />
+Spring Security 3.2부터는 @AuthenticationPrincipal 어노테이션으로 Custom 로그인 객체를 가져올 수 있다.
+@AuthenticationPrincipal을 사용한 예는 다음과 같다. <br />
+<br />
+
+```
+@Controller 
+public class MyController { 
+
+    @GetMapping("/username") 
+    @ResponseBody 
+    public String currentUserName(@AuthenticationPrincipal User user) { 
+	return user;
+    } 
+}
+```
+
+<br />
+@AuthenticationPrincipal의 장점으로는 타입 변환이 필요 없고 Authentication과 동일하게 보안 특정 코드만 갖는다.<br />
+또한 Custom 로그인 객체를 가져올 수 있기 때문에 기능적 활용도가 높다는 것이다.<br />
+<br />
+이제 스프링 시큐리티 챕터가 모두 끝났다. 책은 Thymeleaf와 구버전 Spring Security를 사용하여 작성되었기 때문에 시간이 많이 걸리고 있다.<br />
+책의 환경과 같이 taco-cloud-with-thymeleaf-and-low-spring-version을 구성하였으니 이제 두 마리 토끼를 잡을 수 있다.<br />
+<br />
+다음은 쉬어가는 챕터 구성 속성 사용하기.<br />
+학원에서 배운 내용들이기에 복습 개념으로 읽어보면 되겠다.<br />
 
 
 
