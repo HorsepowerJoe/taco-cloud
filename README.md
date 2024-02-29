@@ -10,6 +10,163 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+
+## 24-02-29
+<b>JWT를 이용하여 Stateless한 인증 구현하기.</b>
+책의 내용은 formLogin을 이용한 세션방식의 Stateful한 인증 구현이었다.<br />
+그러나 나의 경우는 Vue와 Spring을 연동하여 백엔드를 Stateless하게 구현하여야 하기 때문에 책의 내용을 따라가지 않고,<br />
+별도의 브랜치인 taco-cloud-with-thymeleaf-and-low-spring-version에 세션 방식의 로그인을 구현하였다.<br />
+<br />
+
+Stateless와 Stateful 그리고 RESTful 하다는 것은 무엇이고. 왜 나는 stateless한 구현을 하여야 하는지에 대한 정리가 필요했다.<br />
+무작정 난 그냥 그렇게 하기로 했으니까 rest고 stateless야 라고 근거없이 우기기는 싫었기 때문이다. <br />
+<br />
+
+일단 나의 경우는 프론트엔드와 백엔드가 분리되어 있는 구조이다. <br />
+Vue는 클라이언트 사이드에서 실행되기 때문에 클라이언트 사이드 처리는 WAS에서 직접적으로 이루어지지 않는다. <br />
+<br />
+
+Vue는 클라이언트 측에서 실행되기 때문에, 페이지 라우팅은 클라이언트 측에서 처리된다. <br />
+유저가 브라우저에서 192.168.0.100:8080/design등의 주소로 요청을 보내면, 이 요청은 WAS에 도달하게 되지만 <br />
+WAS는 해당 요청을 받아서 리액트 애플리케이션의 라우팅을 처리하는 것이 아니라, 단순히 정적 파일을 제공하는 역할만 수행한다. <br />
+<br />
+
+WAS는 요청된 주소에 대한 정적 파일(빌드된 HTML, CSS, JavaScript 파일 등)을 제공하게 되고<br />
+클라이언트 사이드에서는 라우터가 해당 주소에 대한 뷰를 렌더링하고 사용자에게 보여주게 된다. <br />
+<br />
+
+이것을 CSR 즉, Client Side Rendering이라고 한다.<br />
+CSR의 장점으로는 View 렌더링을 브라우저에서 하기 때문에 트래픽이 감소하고, 페이지를 넘어갈 때에 새로고침이 발생하지 않아 네이티브 앱과 비슷한 경험을 할 수 있다.<br />
+단점으로는 서버에 처음으로 요청을 하게 되면 전체 페이지에 대한 모든 문서 파일을 받기 때문에 서버 사이드 렌더링보다는 속도가 느린 점이 있다.<br />
+<br />
+
+JSP나 Thymeleaf를 사용한 서버 사이드 렌더링 방식에서는 페이지마다 요청과 응답이 이루어지기 때문에 서버에서 이용자의 상태를 저장하기 편하다는 이점이 있다.<br />
+그로 인하여 서버 측에서 세션을 사용해서 사용자의 로그인 상태나 기타 상태 정보를 유지하고 관리할 수 있다.<br />
+<br />
+
+반면에 Vue와 같은 클라이언트 측 렌더링 기술을 사용하는 경우에는 일반적으로 페이지 간의 이동이 AJAX를 통해 이루어지며<br />
+페이지가 변경될 때마다 서버에 새로운 요청을 보내지 않기 때문에 서버 측에서 이용자의 상태를 저장하기가 어렵다.<br />
+<br />
+
+그렇기 때문에 프론트와 백엔드가 분리되어 클라이언트 사이드에서 상태를 관리하며, 서버와 통신이 필요할 시에는 REST API를 이용하여 Stateless한 통신을 하는 것이 바람직하다.<br />
+<br />
+
+REST API로 Stateless한 인증을 구현하는 방법으로는 대표적으로 Oauth와 JWT가 있는데. 나는 둘 다 전부 다 구현하여 어떻게 사용하는지 요목조목 살펴볼 예정이다.<br />
+처음으로는 JWT를 사용하여 Stateless한 구현을 시작하기로 했다.<br />
+<br />
+
+JWT를 사용하여 인증 인가를 구현하려면 커스텀 필터를 사용하여야 한다.<br />
+기존의 formLogin이나 httpBasic을 모두 disable하여 주고, REST API의 경우에는 CSRF공격에 취약하지 않기 때문에 csrf도 disable 한다.<br />
+formLogin과 httpBasic을 disable하면 UsernamePasswordAuthenticationFilter가 꺼지게 되는데 JWT인증을 위해 UsernamePasswordAuthenticationFilter를 커스터마이즈 하여<br />
+커스텀 필터로써 사용하면 된다.<br />
+<br />
+
+```
+package sia.tacocloud.tacos.jwt;
+
+import java.io.IOException;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+public class LoginFilter extends UsernamePasswordAuthenticationFilter {
+    private final AuthenticationManager authenticationManager;
+
+    public LoginFilter(AuthenticationManager authenticationManager){
+        this.authenticationManager = authenticationManager;
+        setFilterProcessesUrl("/api/login");
+    }
+
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
+            throws AuthenticationException {
+        String username = obtainUsername(request);
+        String password = obtainPassword(request);
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(username, password);
+        return authenticationManager.authenticate(authToken);
+    }
+
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+            Authentication authResult) throws IOException, ServletException {
+        System.out.println("성공");
+    }
+
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
+            AuthenticationException failed) throws IOException, ServletException {
+                System.out.println("실패");
+        
+    }
+
+    
+
+}
+
+```
+
+<br />
+여기서 평소에 사용하지 않았던 생성자 주입 방식을 사용하였는데 그 이유는 UsernamePasswordAuthenticationFilter의 기본 주소가 /login으로 되어 있기 때문이다.<br />
+나는 Vue의 라우팅을 nonApiPattern으로 작성하고, API요청의 경우에는 /api/**의 패턴으로 작성하였기 때문의 기본 /login 주소를 변경할 필요가 있었다.<br />
+<br />
+
+```
+ public LoginFilter(AuthenticationManager authenticationManager){
+        this.authenticationManager = authenticationManager;
+        setFilterProcessesUrl("/api/login");
+    }
+```
+
+<br />
+생성자 주입을 사용하여 authenticationManager를 주입하고 setFilterProcessesUrl로 기본 주소를 /api/login으로 초기화 하였다.<br />
+attemptAuthentication에서는 username과 password를 받아 검증을 담당하는 객체로 자료를 넘겨주는데, 넘겨주기 위해서는<br />
+UsernamePasswordAuthenticationToken객체에 담아 보내주어야 한다.<br />
+이렇게 보내진 UsernamePasswordAuthenticationToken은 AuthenticationManager에서 검증을 거치고 검증이 완료되면 successfulAuthentication이 동작되며<br />
+그렇지 못한 경우에는 unsuccessfulAuthentication이 작동하게 된다.<br />
+필터를 구현하였다면 SecurityFilterChain에 해당 Filter를 등록해 주어야 한다.<br />
+<br />
+
+
+```
+ @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers("/design", "/orders")
+                        .hasRole("USER")
+                        .requestMatchers("/api/design", "/api/design")
+                        .access(this::hasRole)
+                        .requestMatchers("/", "/**", "/api/**")
+                        .access(this::permitAll)
+                        .anyRequest()
+                        .permitAll())
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class)
+                .httpBasic(withDefaults());
+
+        return http.build();
+    }
+```
+
+<br />
+위에서는 addFilterAt을 사용하였는데, 그 이유는 formLogin과 httpBasic을 disable 하였기 때문이다.<br />
+UsernamePasswordAuthenticationFilter가 비활성화 되었기 때문에 해당 자리에 원하는 필터를 주입하는 addFilterAt를 사용하여 등록시켰다.<br />
+이제 LoginFilter는 UsernamePasswordAuthenticationFilter의 위치에서 UsernamePasswordAuthenticationFilter대신 사용된다.<br />
+
+<br />
+
+
+
 ## 24-02-28
 <b>formLogin 메서드에 대하여.</b><br />
 formLogin 메서드는 Customizer<FormLoginConfigurer<HttpSecurity>>를 매개변수로 받아 폼 로그인을 커스터마이즈 할 수 있게 해준다.<br />
