@@ -60,8 +60,7 @@ REST API로 Stateless한 인증/인가를 구현하는 방법으로는 대표적
 
 JWT를 사용하여 인증/인가를 구현하려면 커스텀 필터를 사용하여야 한다.<br />
 기존의 formLogin이나 httpBasic을 모두 disable하여 주고, REST API의 경우에는 CSRF공격에 취약하지 않기 때문에 csrf도 disable 한다.<br />
-formLogin과 httpBasic을 disable하면 UsernamePasswordAuthenticationFilter가 꺼지게 되는데 JWT인증을 위해 UsernamePasswordAuthenticationFilter를 커스터마이즈 하여<br />
-커스텀 필터로써 사용하면 된다.<br />
+formLogin과 httpBasic을 disable하면 UsernamePasswordAuthenticationFilter가 꺼지게 되는데 JWT인증을 위해 UsernamePasswordAuthenticationFilter를 커스터마이즈 하여 커스텀 필터로써 사용하면 된다.<br />
 <br />
 
 ```
