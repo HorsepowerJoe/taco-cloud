@@ -165,9 +165,206 @@ UsernamePasswordAuthenticationToken객체에 담아 보내주어야 한다.<br /
 위에서는 addFilterAt을 사용하였는데, 그 이유는 formLogin과 httpBasic을 disable 하였기 때문이다.<br />
 UsernamePasswordAuthenticationFilter가 비활성화 되었기 때문에 해당 자리에 원하는 필터를 주입하는 addFilterAt를 사용하여 등록시켰다.<br />
 이제 LoginFilter는 UsernamePasswordAuthenticationFilter의 위치에서 UsernamePasswordAuthenticationFilter대신 사용된다.<br />
-
+<br />
+<hr />
+<br />
+<p><b>DB기반 로그인 검증 로직</b></p>
+로그인 요청이 POST로 날아오게 되면 LoginFilter를 타고 AuthenticationManager로 넘어오게 된다. <br />
+그렇게 되면 UserDetailsService가 UserRepository에서 데이터를 꺼내 와 UserDetails로 넘겨주고 최종적으로 AuthenticationManager에서 검증하게 된다.<br />
 <br />
 
+먼저 UserDetailsService의 구현체인 CustomUserDetailsService를 구현해보자.<br />
+<br />
+
+```
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class CustomUserDetailsService implements UserDetailsService{
+    private final UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username);
+        if (user != null) {
+            System.out.println("find username : "+user.getUsername());
+            return new CustomUserDetails(user);
+        }
+        return null;
+
+    }
+    
+}
+
+```
+
+<br />
+Spring Security는 UserDetailsService의 loadUserByUsername을 통해 username으로 UserRepository에서 username으로 된 User를 조회한다.<br />
+그 이후에는 UserDetails에 User객체를 담아 AuthenticationManager로 보내주게 된다.<br />
+이제 UserDetails의 구현체인 CustomUserDetails를 만들어보자.<br />
+<br />
+
+```
+@RequiredArgsConstructor
+public class CustomUserDetails implements UserDetails {
+    private final User user;
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+
+        Collection<GrantedAuthority> collection = new ArrayList<>();
+
+        collection.add(new GrantedAuthority() {
+
+            @Override
+            public String getAuthority() {
+                return user.getRole();
+            }
+
+        });
+
+        return collection;
+
+    }
+
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return user.getUsername();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+       return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+       return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+       return true;
+    }
+
+}
+```
+
+<br />
+이전에 공부했던 내용이라 따로 정리를 할 부분이 없다. <br />
+조회 된 userdata를 기반으로 각각의 속성들을 셋업하여 반환하도록 구현하면 된다.<br />
+그러나 getAuthority 메서드의 경우에는 GrantedAuthority객체로 Collection에 add하여야 하는데 GrantedAuthority의 getAuthority를 오버라이드 하여 user의 Role을 return하도록 구현하면 된다.<br />
+<br />
+
+이제 검증 단계가 끝마쳐지게 되면 검증 여부에 따라 successfulAuthentication 또는 unsuccessfulAuthentication이 작동하게 된다.<br />
+프론트에서는 /api/login으로 data를 담아 axios를 보내게 되어 있는데. 여기서 중요한 점은 formdata로 post를 보내야 한다는 것이다.<br />
+new FormData()를 사용하여 post를 보내면 서버에서 아주 잘 받는다.<br />
+사소한 트러블슈팅이었다. <br />
+<br />
+<hr />
+<br />
+
+이제 JWT를 사용할 차례이다.<br />
+그러나 JWT를 사용하기에 앞서 JWT는 무엇이고 Oauth와는 어떤 차이가 있는지 가볍게 정리를 하고 넘어가보자.<br />
+<br />
+
+JWT 토큰은 header, payload, signature 세 부분으로 이루어지며 각 구역이 " . " 기호로 구분된다.<br />
+header에는 토큰의 유형과 서명 알고리즘이 명시되고, payload에는 사용자의 인증/인가 정보가(claim), signature에는 헤더와 페이로드가 비밀키로 서명되어 저장된다.<br />
+<br />
+장점으로는 토큰 자체에 사용자의 정보가 저장되어 있어있기 때문에 서버 입장에서 토큰을 검증만 해주면 된다는 점.<br />
+쿠키나 세션의 경우에는 로그인한 모든 사용자의 세션을 DB나 캐시에 저장해놓고 쿠키로 넘어온 세션 ID로 사용자 데이터를 매번 조회해야 하는 번거로움이 있었지만 JWT는 그렇지 않다.<br />
+<br />
+단점으로는 사용자 추적이 어렵다는 점이다.<br />
+매우 한정된 정보만이 클레임에 담기기 때문에 클레임에 담긴 정보 외에는 추적에 어려움이 있다.<br />
+ex) 로그인 된 전체 사용자의 운영체제 알기
+<br />
+
+<p><b>JWTUtil 클래스</b></p>
+최신 버전의 JWT의 경우에는 SecretKey를 기존의 String키를 사용하는 것이 아닌 객체키를 사용하여야 한다.<br />
+
+객체키를 만드는 방법은 다음과 같다.<br />
+<br />
+
+```
+@Component
+public class JWTUtil {
+    private SecretKey secretKey;
+
+    public JWTUtil(@Value("${spring.jwt.secret}")String secret){
+        this.secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
+    }
+}
+```
+
+<br />
+secret.getBytes(StandardCharsets.UTF_8) 이 부분은 SecretKey를 UTF-8 문자 인코딩을 사용하여 byte 배열로 변환한다.<br />
+Jwts.SIG.HS256.key().build().getAlgorithm() 이 부분은 HS256(HMAC-SHA256) 알고리즘을 사용하는 JWT 생성을 위한 HS256 알고리즘의 키를 가져온다.<br />
+그런 다음, SecretKeySpec 생성자에 위의 두 부분을 전달하여 암호화 알고리즘과 비밀 키를 설정하여 JWT 서명을 생성하는 데 사용될 것이다.<br />
+<br />
+
+이제 검증을 진행하기 위해 token을 전달받아 username을 뽑아내는 getUsername, Role값을 뽑아내는 getRole, 토큰이 만료되었는지 확인할 isExpired와 <br />
+로그인이 성공했을 때 SuccessfulHandler를 통해서 username, role, Expired 시간을 전달받아 응답해주는 토큰 생성 메서드인 createJwt메서드를 구현해보자.<br />
+코드는 다음과 같다.<br />
+<br />
+
+```
+@Component
+public class JWTUtil {
+    private final SecretKey SECRET_KEY;
+
+    public JWTUtil(@Value("${spring.jwt.secret}")String secret){
+        this.SECRET_KEY = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
+    }
+
+    public String getUsername(String token){
+        return Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().get("username", String.class);
+    }
+
+    public String getRole(String token){
+        return Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().get("role", String.class);
+    }
+
+    public boolean isExpired(String token){
+        return Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+    }
+
+    public String createJwt(String username, String role, Long expireMs){
+
+        return Jwts.builder()
+                   .claim("username", username)
+                   .claim("role", role)
+                   .issuedAt(new Date(System.currentTimeMillis()))
+                   .expiration(new Date(System.currentTimeMillis() + expireMs))
+                   .signWith(SECRET_KEY)
+                   .compact();
+    }
+
+}
+```
+
+
+Jwts.parser().verifyWith(SECRET_KEY).build().parseSignedClaims(token).getPayload().get("username", String.class);
+암호화 된 토큰을 Jwts.parser()의 verifyWith 메서드를 통해 SECRET_KEY로 토큰을 검증하고 빌더 타입으로 리턴해준 뒤에<br />
+parseSignedClaims메서드로 토큰의 클레임을 확인하고, getPayload().get()으로 페이로드를 가져와 리턴한다.<br />
+<br />
+
+getRole메서드도 동일한 구조를 가지고 있다.<br />
+isExpired메서드의 경우에는 getExpiration 메서드로 만료시간을 가져와 before메서드로 현재 시간을 넣어주어 만료 여부를 검증한다.<br />
+만료 여부에 따라 boolean이 return된다.<br />
+<br />
+
+createJwt같은 경우는 따로 정리를 할 것이 없다.<br />
+클레임에는 외부에 공개되어도 상관 없는 정보만 넣어야 한다는 것 정도..<br />
 
 
 ## 24-02-28
