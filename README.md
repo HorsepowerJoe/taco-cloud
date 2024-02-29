@@ -87,7 +87,7 @@ String lastName = userDetails.getLastName();
 <br />
 <br />
 HttpServletRequest.getUserPrincipal()는 SecurityContextHolder.getContext().getAuthentication()의 결과를 반환한다.<br />
-사용자 이름과 비밀번호 기반 인증을 사용할 때 UsernamePasswordAuthenticationToken의 인스턴스입니다.<br />
+사용자 이름과 비밀번호 기반 인증을 사용할 때 UsernamePasswordAuthenticationToken의 인스턴스이다.<br />
 이 메서드는 사용자에 대한 추가 정보가 필요한 경우 유용하다.<br />
 <br />
 
