@@ -132,7 +132,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 생성자 주입을 사용하여 authenticationManager를 주입하고 setFilterProcessesUrl로 기본 주소를 /api/login으로 초기화 하였다.<br />
 attemptAuthentication에서는 username과 password를 받아 검증을 담당하는 객체로 자료를 넘겨주는데, 넘겨주기 위해서는<br />
 UsernamePasswordAuthenticationToken객체에 담아 보내주어야 한다.<br />
-이렇게 보내진 UsernamePasswordAuthenticationToken은 AuthenticationManager에서 검증을 거치고 검증이 완료되면 successfulAuthentication이 동작되며<br />
+이렇게 보내진 UsernamePasswordAuthenticationToken은 AuthenticationManager에서 검증을 거치고<br />
+검증이 완료되면 successfulAuthentication이 동작되며<br />
 그렇지 못한 경우에는 unsuccessfulAuthentication이 작동하게 된다.<br />
 필터를 구현하였다면 SecurityFilterChain에 해당 Filter를 등록해 주어야 한다.<br />
 <br />
