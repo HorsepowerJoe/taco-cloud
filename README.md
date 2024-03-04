@@ -10,6 +10,267 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+## 24-03-04
+<b>로그인 성공 실패 핸들러 구현하기.</b><br />
+<br />
+자, 지금까지 로그인을 진행시켜주는 LoginFilter와 JWT를 발급해주는 JWTUtil Class를 구현하였다.<br />
+이제 JWTUtil을 주입받아 successfulAuthentication를 구현하여야 한다.<br />
+작업을 진행하기 전에 이슈가 하나 있었는데. 분명히 httpBasic과 formLogin을 disabled 하였는데도 권한이 필요한 페이지에서 로그인 팝업이 뜨는 문제가 있었다.<br />
+이 부분에서 의도치 않은 삽질을 하였는데 결론적으로는 이전 코드 마지막 부분에 작성한   .httpBasic(withDefaults()); 이 부분이 문제였다..<br />
+이제 작업을 진행해보자.<br />
+
+<br />
+먼저 JWTUtil을 주입하기 위해서는 SecurityConfig에서 JWTUtil을 인자로 추가해주어야 한다.<br />
+SecurityConfig에 JWTUtil을 주입하고 인자를 추가하자.<br />
+<br />
+
+```
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+    // private final DataSource dataSource;
+    private final AuthenticationConfiguration authenticationConfiguration;
+    private final JWTUtil jwtUtil;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(formLogin -> formLogin.disable());
+
+        http
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+    
+        http
+                .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers("/design", "/orders")
+                        .hasRole("USER")
+                        .requestMatchers("/api/design", "/api/design")
+                        .access(this::hasRole)
+                        .requestMatchers("/", "/**", "/api/**")
+                        .access(this::permitAll)
+                        .anyRequest()
+                        .permitAll())
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil),
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAt(new JWTFilter(jwtUtil), LoginFilter.class);
+
+        return http.build();
+    }
+```
+
+<br />
+이제 successfulAuthentication 메서드를 구현해보자.<br />
+골자로는<br />
+<br />
+
+<b>토큰 생성을 위해 유저의 데이터를 뽑아낸다.</b>
+<br />
+
+```
+CustomUserDetails customUserDetails = (CustomUserDetails)authResult.getPrincipal();
+                String username = customUserDetails.getUsername();
+                GrantedAuthority auth = authResult.getAuthorities().iterator().next();
+                String role = auth.getAuthority();
+		//String role = authResult.getAuthorities().iterator().next().getAuthority();
+```
+
+<br />
+<b>뽑아낸 데이터들로 토큰을 생성한다.</b>
+<br />
+
+```
+  String token = jwtUtil.createJwt(username, role, EXPIRED_TIME);
+```
+
+<br />
+<b>헤더에 토큰을 담아 날린다.</b>
+<br />
+
+```
+response.addHeader("Authorization", "Bearer " + token);
+```
+
+<br />
+HTTP인증 방식은 RFC 7235 정의에 따라 'Authorization: 타입 인증토큰'의 형태를 가져야 하기 때문에 위와 같이 헤더에 담아준다.<br />
+로그인을 실패했을 때에는 401 status를 보내주고 프론트에서 처리해주자.<br />
+<br />
+
+```
+ @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
+            AuthenticationException failed) throws IOException, ServletException {
+                response.setStatus(401);
+    }
+```
+
+<br />
+<hr />
+<br />
+
+<b><p>JWT 검증 필터 구현하기</p></b>
+스프링 시큐리티 filter chain에다가 요청에 담긴 JWT를 검증하기 위한 커스텀 필터를 등록해야 한다.<br />
+이 필터를 통해 요청 헤더 Authorization 키에 JWT가 존재하는 경우 JWT를 검증하고 강제로 SecurityContextHolder에 세션을 생성한다.<br />
+그러나 이 세션은 STATELESS 상태로 관리되기 때문에 해당 요청이 끝나면 소멸된다.<br />
+<br />
+
+<b><p>JWTFilter 구현하기</p></b>
+
+JWTFilter는 요청에 대하여 한 번만 동작하는 OncePerRequestFilter를 상속받아 구현한다.<br />
+OncePerRequestFilter에는 impl 하여야 하는 메서드인 doFilterInternal이 있는데<br />
+이를 통하여 검증을 진행한다.<br />
+<br />
+토큰을 검증하기 위해 JWTUtil을 주입받아 request에서 토큰을 꺼내와 검증하는 로직을 구현하여야 한다.<br />
+<br />
+
+```
+@RequiredArgsConstructor
+public class JWTFilter extends OncePerRequestFilter {
+    private final JWTUtil jwtUtil;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String authorization = request.getHeader("Authorization");
+
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            System.out.println("token null");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = authorization.split(" ")[1];
+        if (jwtUtil.isExpired(token)) {
+            System.out.println("token expired");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String username = jwtUtil.getUsername(token);
+        String role = jwtUtil.getRole(token);
+
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword("temppassword");
+        user.setRole(role);
+
+        CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
+        Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null,
+                customUserDetails.getAuthorities());
+
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+
+        filterChain.doFilter(request, response);
+
+    }
+
+}
+
+```
+
+<br />
+먼저 헤더에 토큰이 담겼는지 request를 통해 가져온다.<br />
+만약 토큰이 담겨서 날아오지 않았다면 다음 필터에게 req와 resp를 넘겨주고 메서드를 종료한다.<br />
+<br />
+토큰이 담겨 왔다면 이제 검증을 할 차례이다.<br />
+먼저 우리의 토큰 타입인 Bearer를 사용하고 있는지 체크하고, 타른 타입이 날아왔을 경우 다음 필터에게 req와 resp를 넘겨주고 메서드를 종료한다.<br />
+<br />
+다음으로는 토큰 타입이 맞았을 경우에는 토큰이 만료되지 않았는지 확인하여야 하는데 이를 위해서는 Bearer와 토큰을 분리하여야 한다.<br />
+그렇기에 " "공백을 기준으로 split한 뒷 부분 [1]을 가져와 JWTUtil의 isExpired 메서드를 통해 만료 여부를 확인하여<br />
+만료되었을 경우에는 다음 필터에게 req와 resp를 넘겨주고 메서드를 종료한다.<br />
+<br />
+만료또한 되지 않은 정상적인 토큰일 경우에는 토큰에서 usernmae과 role을 가져와 CustomUserDetails에 담아 스프링 시큐리티 인증 토큰을 생성한 뒤<br />
+세션에 사용자를 등록한다.<br />
+이 과정에서 패스워드는 필요하지 않기 때문에 임시 값을 지정하여 준다.<br />
+<br />
+이제 LoginFilter 앞에 해당 필터를 등록하면 된다.<br />
+<br />
+
+```
+.addFilterAt(new JWTFilter(jwtUtil), LoginFilter.class);
+```
+
+<br />
+자. 이제 기본적인 과정은 끝났다.<br />
+이제 로그인을 구현하였으니 프론트엔드에서 사용자가 권한이 필요한 페이지로 이동하려고 할 때<br />
+로그인 여부에 따라 Login페이지로 이동시켜주어야 한다.<br />
+이는 router가 담당하고 있다.<br />
+
+```
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: Home
+  },
+  {
+    path: '/design',
+    name: 'Design',
+    component: Design,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/orders/current',
+    name: 'OrderForm',
+    component: OrderForm,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/register',
+    name: 'Registration',
+    component: Registration
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginPage
+  },
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+});
+
+router.beforeEach((to, from, next) => {
+  if(to.matched.some(record => record.meta.requiresAuth)) {
+    const jwtToken = localStorage.getItem('jwtToken');
+
+    if(!jwtToken){
+      next('/login');
+    }else{
+      next();
+    }
+  } else {
+    next();
+  }
+});
+```
+
+beforeEach는 라우팅이 이루어지기 전에 아래 내용들을 실행시킨다.<br />
+jwtToken이 없다면? 로그인 페이지로 이동될 것이고. 있거나 권한을 필요로 하지 않는 페이지라면 next() 된다.<br />
+
+
+
+
 
 ## 24-02-29
 <b>JWT를 이용하여 Stateless한 인증 구현하기.</b><br />
