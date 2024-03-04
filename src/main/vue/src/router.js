@@ -15,12 +15,18 @@ const routes = [
   {
     path: '/design',
     name: 'Design',
-    component: Design
+    component: Design,
+    meta: {
+      requiresAuth: true
+    }
   },
   {
     path: '/orders/current',
     name: 'OrderForm',
-    component: OrderForm
+    component: OrderForm,
+    meta: {
+      requiresAuth: true
+    }
   },
   {
     path: '/register',
@@ -38,5 +44,21 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 });
+
+router.beforeEach((to, from, next) => {
+  if(to.matched.some(record => record.meta.requiresAuth)) {
+    const jwtToken = localStorage.getItem('jwtToken');
+
+    if(!jwtToken){
+      next('/login');
+    }else{
+      next();
+    }
+  } else {
+    next();
+  }
+});
+
+
 
 export default router;

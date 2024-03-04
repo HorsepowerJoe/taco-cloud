@@ -21,6 +21,8 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
+import sia.tacocloud.tacos.jwt.JWTFilter;
+import sia.tacocloud.tacos.jwt.JWTUtil;
 import sia.tacocloud.tacos.jwt.LoginFilter;
 import sia.tacocloud.tacos.repository.UserRepository;
 
@@ -30,7 +32,7 @@ import sia.tacocloud.tacos.repository.UserRepository;
 public class SecurityConfig {
     // private final DataSource dataSource;
     private final AuthenticationConfiguration authenticationConfiguration;
-
+    private final JWTUtil jwtUtil;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -38,16 +40,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .formLogin(formLogin -> formLogin.disable())
+        http
+                .csrf(csrf -> csrf.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .formLogin(formLogin -> formLogin.disable());
+
+        http
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+    
+        http
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/design", "/orders")
                         .hasRole("USER")
@@ -57,8 +64,9 @@ public class SecurityConfig {
                         .access(this::permitAll)
                         .anyRequest()
                         .permitAll())
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class)
-                .httpBasic(withDefaults());
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil),
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAt(new JWTFilter(jwtUtil), LoginFilter.class);
 
         return http.build();
     }
@@ -86,21 +94,6 @@ public class SecurityConfig {
             return new AuthorizationDecision(false);
         }
     }
-
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // @Bean
     // public JdbcUserDetailsManager jdbcUserDetailsService() {
