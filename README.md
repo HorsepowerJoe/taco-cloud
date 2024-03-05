@@ -10,6 +10,108 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+## 24-03-05
+<b><p>JWT기반 구축 완료, Refresh Token 개념 바로잡기</p></b>
+<br />
+기존에도 JWT를 사용하여 Access Token과 Refresh Token을 발급하여 인증 인가를 진행하였다.<br />
+그러나 Refresh Token을 어느 부분에서 발급해 주어야 하고 이 Refresh Token을 어디서 가지고 있어야 하는지를 고민했었다.<br />
+그러나 이번 복습 과정에서 Stateless의 개념을 바로잡았고.<br />
+Stateless한 방식으로는 Refresh Token을 탈취의 위협으로부터 지키지 못한다는 것 또한 알게되었다.<br />
+<br />
+
+기존에는 Refresh Token을 발급하는 REST Controller가 따로 존재했으며 사용자 인증이 완료되면 Access Token을 발급 프론트에서는 이를 통해 Refresh Token Endpoint로<br />
+POST요청을 보내 Refresh Token을 발급받아 Local Storage에 저장시켰다.<br />
+<br />
+
+백엔드에서는 Refresh Token이 발급되면 이를 DB의 RefreshToken Table에 해당 Token을 저장하고 이후 재발급 요청이 있다면 DB에 저장된 Token을 Select하고<br />
+존재할 시 새로운 Access Token을 발급시켰다.<br />
+<br />
+
+사실 Refresh Token으로 Access Token을 안전하게 발급하기 위해 Refrsh Token의 소유주를 알아야 한다고 생각했고<br />
+해당 Refresh Token으로 발급된 Access Token은 사용자 한 명당 하나씩 발급될테니 1:1 관계로 테이블을 구성하였었다.<br />
+보안을 신경쓰냐고 Stateless를 신경쓰지 못하였는데 이번 복습 과정에서 내 판단이 의도 여부를 떠나 이해관계가 잘 맞아떨어졌다고 느꼈다.<br />
+<br />
+
+Refresh Token은 Access Token의 보안상의 문제와 편의성을 개선하기 위해 도입되었다.<br />
+Access Token만 사용할 경우에는 몇가지 불편한 상황들이 발생했다.<br />
+탈취의 위협 -> 만료기간을 짧게 설정 -> 너무 빠르게 인증이 만료되기 때문에 로그인을 자주 하여야 함<br />
+편의성 중심 -> 만료 기간을 길게 설정 -> 토큰이 탈취되었을 경우 악의적으로 악용 되는 시간이 길어짐<br />
+
+이를 개선하기 위해 Refresh Token을 도입하였고<br />
+만료 기간이 긴 Refresh Token과 만료 기간이 짧은 Access Token을 동시 발급하여<br />
+Access Token이 만료되었을 경우 Refresh Token을 사용하여 Access Token을 재발급하게 바뀜으로<br />
+인증이 만료되더라도 다시 로그인 과정을 거칠 필요 없이 간편하게 인증 상태를 유지할 수 있게 되었다.<br />
+<br />
+
+그러나 Refresh Token 또한 탈취의 위협이 존재한다.<br />
+그렇기 때문에 Refresh Token을 보완할 방법이 필요했고 이를 보완하기 위해 Refresh 토큰 Rotate 방식과 Refresh 토큰 블랙리스팅 방식이 생겨나게 된다.<br />
+이전 프로젝트에서 나의 경우는 Refresh Token Blacklisting 방식을 사용하여 Refresh Token의 보안을 강화하였다. <br />
+<br />
+
+<br />
+<hr />
+<br />
+
+<b><p>Refresh Token 발급을 위한 successfulAuthentication 구현</p></b>
+<br />
+기존에는 이 방식을 생각지 못해 Refresh Token을 생성해주는 REST Controller를 구현하였지만 이번 경우에는<br />
+successfulAuthentication에서 Access Token과 Refresh Token을 만들어 리턴해준다.<br />
+또한 Access Token은 Local Storage에 Refresh Token은 HttpOnly Cookie에 저장할 것인데 그 이유는 다음과 같다.<br />
+<br />
+
+```
+Local Storage : XSS 공격에 취약함
+httpOnly Cookie : CSRF 공격에 취약함
+
+
+Access Token은 짧은 생명 주기로 탈취에서 사용까지 기간이 매우 짧다.
+XSS 공격의 경우에는 방어 로직을 작성하여 최대한 보호 할 수 있지만, CSRF 공격의 경우 클릭 한 번으로 단시간에 요청이 진행되기 때문에
+권한이 필요한 모든 경로에 사용되는 Access Token은 CSRF 공격의 위험보다는 XSS 공격을 받는 게 더 나은 선택일 수 있다.
+
+반면 Refresh Token은 쿠키에 저장한다.
+쿠키는 XSS 공격을 받을 수 있지만 httpOnly를 설정하면 완벽히 방어할 수 있다. 그러나 CSRF 공격에 대해 위험하겠지만
+Refresh 토큰의 사용처는 단 하나인 토큰 재발급 경로이기 때문에 CSRF 공격으로는 토큰 재발급 경로에서 크게 피해를 입힐 만한 로직이 없기 때문이다.
+```
+
+<br />
+이제 successfulAuthentication을 구현한다.<br />
+<br />
+
+```
+@Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+            Authentication authResult) throws IOException, ServletException {
+        String username = authResult.getName();
+        String role = authResult.getAuthorities().iterator().next().getAuthority();
+
+        String access = jwtUtil.createJwt("access", username, role, ACCESS_TOKEN_EXPIRED_TIME);
+        String refresh = jwtUtil.createJwt("refresh", username, role, REFRESH_TOKEN_EXPIRED_TIME);
+
+        response.setHeader("access", access);
+        response.addCookie(createCookie("refresh", refresh));
+        response.setStatus(HttpStatus.OK.value());
+    }
+
+ private Cookie createCookie(String key, String value){
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(REFRESH_TOKEN_EXPIRED_TIME.intValue());
+        //HTTPS의 경우
+        //cookie.setSecure(true);
+        //쿠키의 적용 범위 설정
+        //cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        return cookie;
+    }
+```
+
+<br />
+이제 Refresh Token과 Access Token이 발급되었으니<br />
+Refresh Token을 통해 Access Token을 발급하는 과정이 필요하다.<br />
+
+
+
+
+
 ## 24-03-04
 <b>로그인 성공 실패 핸들러 구현하기.</b><br />
 <br />
