@@ -10,6 +10,122 @@
 <p>3. 서비스 운영이 쉬워지는 AWS 인프라 구축 가이드</p>
 <br />
 
+## 24-03-08
+<b><p>Access Token 검증하기</p></b>
+이전 과정에서 Refresh Token을 도입하게 되면서 Catagory 개념이 생기게 되었다.<br />
+이제 header에 access키로 AccessToken 밸류를 담아 보내게 되는데<br />
+JWTFilter를 수정하여 이를 받아 처리할 수 있게 바꿔 주어야 한다<br />
+<br />
+
+```
+  // 헤더에서 access키에 담긴 토큰을 꺼냄
+                String accessToken = request.getHeader("access");
+
+                // 토큰이 없다면 다음 필터로 넘김
+                if(accessToken == null){
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                // 토큰이 있다면 만료 여부 확인, 만료시 다음 필터로 넘기지 않음
+                try {
+                    jwtUtil.isExpired(accessToken);
+                } catch (ExpiredJwtException e) {
+                    PrintWriter writer = response.getWriter();
+                    writer.print("access token expired");
+
+                    //response status code 401
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
+                // 토큰이 access인지 확인 (발급시 페이로드에 명시)
+                String category = jwtUtil.getCategory(accessToken);
+
+                if(!category.equals("access")){
+
+                    //response body
+                    PrintWriter writer = response.getWriter();
+                    writer.print("invalid access token");
+
+                    //response status code 401
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
+                //위 과정을 모두 거쳤다면 검증 완료.
+                String username = jwtUtil.getUsername(accessToken);
+                String role = jwtUtil.getRole(accessToken);
+
+                User user = new User();
+                user.setUsername(username);
+                user.setRole(role);
+                CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
+                Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                filterChain.doFilter(request, response);
+```
+<br />
+
+핵심적인 내용은 다음과 같다.<br />
+1. 액세스 토큰 받기
+2. 액세스 토큰 검증하기
+3. 액세스 토큰 검증 되지 않을 시 프론트와 협의된 응답코드 던져주기
+
+프론트에서는 만료 응답코드를 받게 되면 Refresh Token을 이용하여 새로운 Access Token을 발급받도록 로직을 작성하여야 한다.<br />
+
+이제 프론트에서 토큰이 만료되었을 경우 Refresh Token을 이용하여 새로운 Access Token을 발급받는 컨트롤러를 구현하여보자.<br />
+```
+@RestController
+public class RefreshController {
+    private final JWTUtil jwtUtil;
+    private Long ACCESS_TOKEN_EXPIRED_TIME;
+
+    public RefreshController(JWTUtil jwtUtil,
+            @Value("${spring.jwt.access-expired-time}") Long ACCESS_TOKEN_EXPIRED_TIME) {
+        this.jwtUtil = jwtUtil;
+        this.ACCESS_TOKEN_EXPIRED_TIME = ACCESS_TOKEN_EXPIRED_TIME;
+    }
+
+
+    @GetMapping(path = "/tokenRefresh", headers = "HEADER")
+    public ResponseEntity<Object> tokenRefresh(HttpServletRequest request) {
+        String refreshToken = request.getHeader("refresh");
+
+        // 토큰이 없다면 badRequest
+        if (refreshToken == null) {
+
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        // 토큰이 있다면 만료 여부 확인, 만료시 badRequest
+        try {
+            jwtUtil.isExpired(refreshToken);
+        } catch (ExpiredJwtException e) {
+            return ResponseEntity.badRequest().body("refresh token expired");
+        }
+
+        // 토큰이 refresh인지 확인 (발급시 페이로드에 명시)
+        String category = jwtUtil.getCategory(refreshToken);
+
+        if (!category.equals("refresh")) {
+            return ResponseEntity.badRequest().body("invalid refresh token");
+        }
+
+        // 위 과정을 모두 거쳤다면 AccessToken 발급
+        String username = jwtUtil.getUsername(refreshToken);
+        String role = jwtUtil.getRole(refreshToken);
+
+        String access = jwtUtil.createJwt("access", username, role, ACCESS_TOKEN_EXPIRED_TIME);
+        return ResponseEntity.ok().header("access", access).build();
+
+    }
+}
+```
+
+
 ## 24-03-05
 <b><p>JWT기반 구축 완료, Refresh Token 개념 바로잡기</p></b>
 <br />
