@@ -1,10 +1,9 @@
 package sia.tacocloud.tacos.security;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 import java.util.Calendar;
 import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,15 +23,26 @@ import lombok.RequiredArgsConstructor;
 import sia.tacocloud.tacos.jwt.JWTFilter;
 import sia.tacocloud.tacos.jwt.JWTUtil;
 import sia.tacocloud.tacos.jwt.LoginFilter;
-import sia.tacocloud.tacos.repository.UserRepository;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
     // private final DataSource dataSource;
     private final AuthenticationConfiguration authenticationConfiguration;
     private final JWTUtil jwtUtil;
+
+    private final Long ACCESS_TOKEN_EXPIRED_TIME;
+
+    private final Long REFRESH_TOKEN_EXPIRED_TIME;
+
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil,
+            @Value("${spring.jwt.access-expired-time}") Long aCCESS_TOKEN_EXPIRED_TIME,
+            @Value("${spring.jwt.refresh-expired-time}") Long rEFRESH_TOKEN_EXPIRED_TIME) {
+        this.authenticationConfiguration = authenticationConfiguration;
+        this.jwtUtil = jwtUtil;
+        ACCESS_TOKEN_EXPIRED_TIME = aCCESS_TOKEN_EXPIRED_TIME;
+        REFRESH_TOKEN_EXPIRED_TIME = rEFRESH_TOKEN_EXPIRED_TIME;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -53,7 +63,7 @@ public class SecurityConfig {
 
         http
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-    
+
         http
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/design", "/orders")
@@ -64,7 +74,9 @@ public class SecurityConfig {
                         .access(this::permitAll)
                         .anyRequest()
                         .permitAll())
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil),
+                .addFilterAt(
+                        new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil,
+                                ACCESS_TOKEN_EXPIRED_TIME, REFRESH_TOKEN_EXPIRED_TIME),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAt(new JWTFilter(jwtUtil), LoginFilter.class);
 

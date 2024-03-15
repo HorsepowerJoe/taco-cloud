@@ -1,12 +1,14 @@
 package sia.tacocloud.tacos.jwt;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,37 +25,55 @@ public class JWTFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authorization = request.getHeader("Authorization");
+                // 헤더에서 access키에 담긴 토큰을 꺼냄
+                String accessToken = request.getHeader("access");
 
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            System.out.println("token null");
-            filterChain.doFilter(request, response);
-            return;
-        }
+                // 토큰이 없다면 다음 필터로 넘김
+                if(accessToken == null){
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
-        String token = authorization.split(" ")[1];
-        if (jwtUtil.isExpired(token)) {
-            System.out.println("token expired");
-            filterChain.doFilter(request, response);
-            return;
-        }
+                // 토큰이 있다면 만료 여부 확인, 만료시 다음 필터로 넘기지 않음
+                try {
+                    jwtUtil.isExpired(accessToken);
+                } catch (ExpiredJwtException e) {
+                    PrintWriter writer = response.getWriter();
+                    writer.print("access token expired");
 
-        String username = jwtUtil.getUsername(token);
-        String role = jwtUtil.getRole(token);
+                    //response status code 401
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
 
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword("temppassword");
-        user.setRole(role);
+                // 토큰이 access인지 확인 (발급시 페이로드에 명시)
+                String category = jwtUtil.getCategory(accessToken);
 
-        CustomUserDetails customUserDetails = new CustomUserDetails(user);
+                if(!category.equals("access")){
 
-        Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null,
-                customUserDetails.getAuthorities());
+                    //response body
+                    PrintWriter writer = response.getWriter();
+                    writer.print("invalid access token");
 
-        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    //response status code 401
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
 
-        filterChain.doFilter(request, response);
+                //위 과정을 모두 거쳤다면 검증 완료.
+                String username = jwtUtil.getUsername(accessToken);
+                String role = jwtUtil.getRole(accessToken);
+
+                User user = new User();
+                user.setUsername(username);
+                user.setRole(role);
+                CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
+                Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                filterChain.doFilter(request, response);
+
 
     }
 

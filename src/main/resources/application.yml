@@ -26,3 +26,5 @@ spring:
       mode: always
   jwt:
     secret: adkfjlwjkelfhiweffojdknlsdifjeklweifjalsieusiaaaaajdksss
+    access-expired-time: 600000
+    refresh-expired-time: 86400000

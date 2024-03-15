@@ -1,5 +1,15 @@
 {"properties": [{
   "name": "spring.jwt.secret",
   "type": "java.lang.String",
-  "description": "A description for 'spring.jwt.secret'"
+  "description": "A description for 'spring.jwt.secret'"},
+  {
+  "name": "spring.jwt.access-expired-time",
+  "type": "java.lang.Long",
+  "description": "A description for 'spring.jwt.access-expired-time'"
+  },
+  {
+  "name": "spring.jwt.refresh-expired-time",
+  "type": "java.lang.Long",
+  "description": "A description for 'spring.jwt.refresh-expired-time'"
+  
 }]}

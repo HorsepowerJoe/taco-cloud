@@ -2,6 +2,7 @@ package sia.tacocloud.tacos.jwt;
 
 import java.io.IOException;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,14 +19,22 @@ import jakarta.servlet.http.HttpServletResponse;
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
-    private final Long ACCESS_TOKEN_EXPIRED_TIME = 600000L;
-    private final Long REFRESH_TOKEN_EXPIRED_TIME = 86400000L;
+    private final Long ACCESS_TOKEN_EXPIRED_TIME;
+    private final Long REFRESH_TOKEN_EXPIRED_TIME;
 
-    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil) {
+    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil, Long ACCESS_TOKEN_EXPIRED_TIME, Long REFRESH_TOKEN_EXPIRED_TIME) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.ACCESS_TOKEN_EXPIRED_TIME = ACCESS_TOKEN_EXPIRED_TIME;
+        this.REFRESH_TOKEN_EXPIRED_TIME = REFRESH_TOKEN_EXPIRED_TIME;
+        
         setFilterProcessesUrl("/api/login");
     }
+
+    
+    
+
+
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
